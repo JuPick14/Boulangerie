@@ -111,3 +111,9 @@ body{
   background: var(--patron-main);
   color:#3b2a1a;
 }
+
+/* ===== Active tab color unified (same as Patron) ===== */
+.tab.active{
+  background: var(--patron-main) !important;
+  color:#3b2a1a !important;
+}

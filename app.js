@@ -1731,8 +1731,6 @@ function openPatronPinModal(){
 function closePatronPinModal(){
   if (!patronPinModal) return;
   patronPinModal.style.display = "none";
-  if (patronPinInput) patronPinInput.value = "";
-  if (patronPinError) patronPinError.style.display = "none";
 }
 
 btnPatronUnlock && btnPatronUnlock.addEventListener("click", openPatronPinModal);
@@ -1752,12 +1750,14 @@ btnPatronPinOk && btnPatronPinOk.addEventListener("click", () => {
   setPatronUnlocked(true);
   resetPatronAutoLock();
   closePatronPinModal();
+  try{ refreshPatronUI2(); }catch(e){}
   alert("Menu Patron déverrouillé ✅");
 });
 
 btnPatronLock && btnPatronLock.addEventListener("click", () => {
   setPatronUnlocked(false);
   startPatronAutoLock();
+  try{ refreshPatronUI2(); }catch(e){}
   alert("Menu Patron reverrouillé.");
 });
 
@@ -1901,4 +1901,52 @@ document.addEventListener("click", (e) => {
   if (activePanel === "patron" && goingTo !== "patron" && isPatronUnlocked && isPatronUnlocked()){
     lockPatronSoon();
   }
+});
+/***********************
+ *  PATRON OVERRIDE (robuste)
+ ***********************/
+function showHidePatronOnlyTabs(){
+  const unlocked = (typeof isPatronUnlocked === "function") && isPatronUnlocked();
+  document.querySelectorAll(".tab.patron-only").forEach(t => {
+    t.style.display = unlocked ? "" : "none";
+  });
+}
+function refreshPatronUI2(){
+  const unlocked = (typeof isPatronUnlocked === "function") && isPatronUnlocked();
+  const lockedCard = document.getElementById("patronLocked");
+  const contentCard = document.getElementById("patronContent");
+  if (lockedCard) lockedCard.style.display = unlocked ? "none" : "block";
+  if (contentCard) contentCard.style.display = unlocked ? "block" : "none";
+  showHidePatronOnlyTabs();
+}
+setTimeout(()=>{ try{ refreshPatronUI2(); }catch(e){} }, 0);
+
+/***********************
+ *  Verrouillage immédiat à la sortie de Patron
+ ***********************/
+document.addEventListener("click", (e) => {
+  const t = e.target;
+  if (!t || !t.classList || !t.classList.contains("tab")) return;
+  const goingTo = t.getAttribute("data-tab");
+  if (!(typeof isPatronUnlocked === "function") || !isPatronUnlocked()) return;
+  const activeId = document.querySelector(".panel.active")?.id;
+  if (activeId === "patron" && goingTo !== "patron"){
+    setTimeout(() => {
+      setPatronUnlocked(false);
+      try{ refreshPatronUI2(); }catch(e){}
+    }, 30);
+  }
+});
+
+/***********************
+ *  Garde-fou Patron-only (bloque si verrouillé)
+ ***********************/
+document.querySelectorAll(".tab.patron-only").forEach(t => {
+  t.addEventListener("click", (e) => {
+    if (!(typeof isPatronUnlocked === "function") || !isPatronUnlocked()){
+      e.preventDefault();
+      alert("Accès réservé au menu Patron 🔒");
+      document.querySelector('.tab[data-tab="patron"]')?.click();
+    }
+  });
 });
