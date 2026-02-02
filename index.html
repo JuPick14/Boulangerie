@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Boulangerie Pâtisserie Cointe - Gestion</title>
+  <link rel="stylesheet" href="./style.css?v=1" />
+  <meta name="theme-color" content="#2ecc71" />
+</head>
+<body>
+
+<header class="header">
+  <h1>Boulangerie Pâtisserie Cointe - Gestion</h1>
+
+  <div class="topbar">
+    <div class="topbar-item">
+      <div class="small">Boulangerie (pour rapports)</div>
+      <input id="bakeryName" type="text" placeholder="Ex : Boulangerie Pâtisserie Cointe" />
+    </div>
+    <div class="topbar-item">
+      <div class="small">Employé (obligatoire)</div>
+      <select id="employeeSelect"></select>
+      <div class="small">Sélectionne l’employé avant d’enregistrer.</div>
+    </div>
+</div>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="temperatures">🌡️ Températures</button>
+    <button class="tab" data-tab="hygiene">🧹 Hygiène</button>
+    <button class="tab" data-tab="inventaire">📦 Inventaire</button>
+    <button class="tab" data-tab="notes">📝 Notes</button>
+    <button class="tab patron-only" data-tab="stats">📊 Stats</button>
+    <button class="tab" data-tab="inspection">🧾 Inspection</button>
+    <button class="tab patron-only" data-tab="suivi">✅ Suivi</button>
+    <button class="tab" data-tab="patron">👑 Patron</button>
+  </nav>
+</header>
+
+<div id="notifs" class="notifs"></div>
+
+<!-- ONGLET TEMPÉRATURES -->
+<section id="temperatures" class="panel active">
+  <div class="row row-split">
+    <div>
+      <label for="periode" class="label">Période</label>
+      <select id="periode">
+        <option value="matin">Matin</option>
+        <option value="apres-midi">Après-midi</option>
+      </select>
+    </div>
+    <div>
+      <div class="small">Employé</div>
+      <div id="tempsEmp" class="small">—</div>
+    </div>
+  </div>
+
+  <div id="zones"></div>
+
+  <div class="actions">
+    <button id="btnSaveTemps">💾 Enregistrer</button>
+    <button id="btnValidateDay" class="secondary">✅ Valider la journée</button>
+    <button id="btnAddCorrectiveTemp" class="secondary">➕ Action corrective (temp)</button>
+    <button id="btnExportTempsCSV">📄 Export CSV</button>
+    <button id="btnExportTempsPDF">🖨️ Export PDF</button>
+    <button id="btnChart">📊 Mettre à jour le graphique</button>
+  </div>
+
+  <h2>Alertes du jour</h2>
+  <div id="tempAlertsList"></div>
+
+  <h2>Graphique (dernières valeurs)</h2>
+  <canvas id="chartTemps" height="220"></canvas>
+</section>
+
+<!-- ONGLET HYGIÈNE -->
+<section id="hygiene" class="panel">
+  <h2>Hygiène / Nettoyage</h2>
+  <div class="row row-split">
+    <div>
+      <label for="hygieneDate" class="label">Date</label>
+      <input id="hygieneDate" type="date" />
+    </div>
+    <div>
+      <label for="hygienePeriode" class="label">Période</label>
+      <select id="hygienePeriode">
+        <option value="matin">Matin</option>
+        <option value="apres-midi">Après-midi</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Employé</div>
+    <div id="hygieneEmp" class="small">—</div>
+  </div>
+
+  <div id="taches"></div>
+
+  <div class="actions">
+    <button id="btnSaveHygiene">💾 Enregistrer</button>
+    <button id="btnExportHygieneCSV">📄 Export CSV</button>
+    <button id="btnExportHygienePDF">🖨️ Export PDF</button>
+  </div>
+</section>
+
+<!-- ONGLET INVENTAIRE -->
+<section id="inventaire" class="panel">
+  <h2>Inventaire / Péremption</h2>
+
+  <div class="card">
+    <div class="card-title">➕ Ajouter un produit au catalogue</div>
+    <div class="row row-split">
+      <div>
+        <div class="small">Nom du produit</div>
+        <input type="text" id="newProdName" placeholder="Ex : Mozzarella">
+      </div>
+      <div>
+        <div class="small">Unité</div>
+        <input type="text" id="newProdUnit" placeholder="kg / L / pièces">
+      </div>
+      <div>
+        <div class="small">Stock mini (alerte)</div>
+        <input type="number" step="0.1" id="newProdMin" placeholder="Ex : 10">
+      </div>
+    </div>
+    <div class="row">
+      <div style="flex:1;">
+        <div class="small">Catégorie</div>
+        <select id="newProdCat">
+          <option value="boulangerie">Boulangerie</option>
+          <option value="patisserie">Pâtisserie</option>
+          <option value="snacking">Snacking</option>
+          <option value="hygiene">Hygiène</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="btnAddProduct">✅ Ajouter au catalogue</button>
+      <button id="btnResetProducts" class="secondary">↩️ Catalogue par défaut</button>
+    </div>
+    <div class="small">Le catalogue sert à retrouver rapidement tes produits dans la liste ci-dessous.</div>
+  </div>
+
+  <div class="row row-split">
+    <div>
+      <label class="label">Filtre</label>
+      <select id="invCatFilter">
+        <option value="all">Tous</option>
+        <option value="boulangerie">Boulangerie</option>
+        <option value="patisserie">Pâtisserie</option>
+        <option value="snacking">Snacking</option>
+        <option value="hygiene">Hygiène</option>
+        <option value="autre">Autre</option>
+      </select>
+    </div>
+    <div class="small" style="align-self:end;">
+      Astuce : filtre pour retrouver vite un produit
+    </div>
+  </div>
+
+  <div class="row row-split">
+    <div>
+      <label for="invProduit" class="label">Produit</label>
+      <select id="invProduit"></select>
+    </div>
+    <div>
+      <label for="invDate" class="label">Date</label>
+      <input id="invDate" type="date" />
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Employé</div>
+    <div id="invEmp" class="small">—</div>
+  </div>
+
+  <div class="card" id="invStockCard">
+    <div class="card-title">Stock (calculé)</div>
+    <div id="invStockInfo" class="small">—</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Tri / affichage</div>
+    <div class="row">
+      <label><input type="checkbox" id="invSortByExp" checked> Trier par DLC la plus proche</label>
+    </div>
+    <div class="small">Astuce : pour le contrôle, trier par DLC est plus lisible.</div>
+  </div>
+
+  <div id="invForm"></div>
+
+  <div class="actions">
+    <button id="btnAddInv">➕ Ajouter entrée produit</button>
+    <button id="btnRiskInv">⚠️ Produits à risque</button>
+    <button id="btnInvHistoryAll" class="secondary">📜 Historique complet</button>
+    <button id="btnExportRiskCSV" class="secondary">📄 Export Risque CSV</button>
+    <button id="btnExportRiskPDF" class="secondary">🖨️ Export Risque PDF</button>
+    <button id="btnExportInvCSV">📄 Export CSV (produit)</button>
+    <button id="btnExportInvPDF">🖨️ Export PDF (produit)</button>
+    <button id="btnExportInvAllCSV" class="secondary">📄 Export CSV (complet)</button>
+    <button id="btnExportInvAllPDF" class="secondary">🖨️ Export PDF (complet)</button>
+    <button id="btnDeleteProduct" class="secondary">🗑️ Supprimer ce produit</button>
+    <button id="btnAddCorrectiveInv" class="secondary">➕ Action corrective (inv)</button>
+  </div>
+
+  
+  <div id="invHistoryFilters" class="card" style="display:none;">
+    <div class="card-title">Filtres historique complet</div>
+    <div class="row row-split">
+      <div>
+        <div class="small">Du</div>
+        <input id="invFrom" type="date" />
+      </div>
+      <div>
+        <div class="small">Au</div>
+        <input id="invTo" type="date" />
+      </div>
+    </div>
+    <div class="row row-split">
+      <div>
+        <div class="small">Recherche produit</div>
+        <input id="invSearch" type="text" placeholder="Ex : farine / beurre..." />
+      </div>
+      <div>
+        <div class="small">Catégorie</div>
+        <select id="invCatFilterAll">
+          <option value="all">Toutes</option>
+          <option value="boulangerie">Boulangerie</option>
+          <option value="patisserie">Pâtisserie</option>
+          <option value="snacking">Snacking</option>
+          <option value="hygiene">Hygiène</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="btnApplyInvFilters" class="secondary">🔎 Appliquer</button>
+      <button id="btnClearInvFilters" class="secondary">♻️ Réinitialiser</button>
+    </div>
+    <div class="small">Astuce : ces filtres s’appliquent aussi aux exports “complet”.</div>
+  </div>
+
+<h3 id="invListeTitle">Historique du produit</h3>
+  <div id="invListe"></div>
+</section>
+
+<!-- ONGLET NOTES -->
+<section id="notes" class="panel">
+  <h2>Notes / Observations</h2>
+
+  <div class="row">
+    <label for="notesDate" class="label">Date</label>
+    <input id="notesDate" type="date" />
+  </div>
+
+  <textarea id="notesTexte" rows="10" placeholder="Ex : anomalie température, intervention technicien, nettoyage exceptionnel..."></textarea>
+
+  <div class="actions">
+    <button id="btnSaveNotes">💾 Enregistrer</button>
+    <button id="btnExportNotesCSV">📄 Export CSV</button>
+    <button id="btnExportNotesPDF">🖨️ Export PDF</button>
+  </div>
+
+  <h3>Historique</h3>
+  <div id="notesListe"></div>
+</section>
+
+<!-- ONGLET STATS -->
+<section id="stats" class="panel">
+  <h2>Statistiques mensuelles</h2>
+  <div class="row row-split">
+    <div>
+      <label class="label">Mois</label>
+      <input id="statsMonth" type="month" />
+    </div>
+    <div>
+      <button id="btnRefreshStats" class="secondary">🔄 Actualiser</button>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Températures</div>
+      <div id="statsTemps" class="small"></div>
+      <canvas id="chartStatsTemps" height="220"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Hygiène</div>
+      <div id="statsHyg" class="small"></div>
+      <canvas id="chartStatsHyg" height="220"></canvas>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Inventaire</div>
+      <div id="statsInv" class="small"></div>
+      <canvas id="chartStatsInv" height="220"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Notes</div>
+      <div id="statsNotes" class="small"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ONGLET INSPECTION -->
+<section id="inspection" class="panel">
+  <h2>Rapport inspection sanitaire</h2>
+  <div class="small">Génère un PDF propre (températures, hygiène, inventaire, notes) pour un mois donné.</div>
+  <div class="row row-split">
+    <div>
+      <label class="label">Mois</label>
+      <input id="inspMonth" type="month" />
+    </div>
+    <div>
+      <button id="btnGenerateInspection" class="secondary">🧾 Générer PDF inspection</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Options</div>
+    <div class="row">
+      <label><input type="checkbox" id="inspIncludeNotes" checked /> Inclure notes</label>
+    </div>
+  </div>
+</section>
+
+
+<!-- ONGLET SUIVI -->
+<section id="suivi" class="panel">
+  <h2>Suivi / Journal (validations & actions)</h2>
+  <div class="small">Ici tu retrouves les validations de journée et les actions correctives (utile en inspection).</div>
+
+  <div class="row row-split">
+    <div>
+      <label class="label">Mois</label>
+      <input id="suiviMonth" type="month" />
+    </div>
+    <div>
+      <button id="btnRefreshSuivi" class="secondary">🔄 Actualiser</button>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">✅ Validations de journée</div>
+      <div id="validationsList"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔧 Actions correctives</div>
+      <div id="actionsList"></div>
+    </div>
+  </div>
+</section>
+
+<!-- MODAL ACTION CORRECTIVE -->
+<div id="modalCorrective" class="modal" style="display:none;">
+  <div class="modal-card">
+    <div class="modal-title">➕ Action corrective</div>
+    <div class="row row-split">
+      <div>
+        <div class="small">Catégorie</div>
+        <select id="corrCat">
+          <option value="temperature">Température</option>
+          <option value="inventaire">Inventaire</option>
+          <option value="hygiene">Hygiène</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+      <div>
+        <div class="small">Date</div>
+        <input id="corrDate" type="date" />
+      </div>
+    </div>
+    <div class="row">
+      <div style="flex:1;">
+        <div class="small">Cible (zone / produit / élément)</div>
+        <input id="corrTarget" type="text" placeholder="Ex : Congélateur 1 / Farine T65" />
+      </div>
+    </div>
+    <div class="row">
+      <div style="flex:1;">
+        <div class="small">Anomalie constatée</div>
+        <textarea id="corrIssue" rows="3" placeholder="Ex : Température à -12°C au lieu de -18°C"></textarea>
+      </div>
+    </div>
+    <div class="row">
+      <div style="flex:1;">
+        <div class="small">Action corrective</div>
+        <textarea id="corrAction" rows="3" placeholder="Ex : Produits déplacés, contrôle thermostat, appel technicien"></textarea>
+      </div>
+    </div>
+    <div class="row row-split">
+      <div class="small">Employé : <b id="corrEmp">—</b></div>
+      <div class="actions" style="justify-content:flex-end;">
+        <button id="btnSaveCorrective">💾 Enregistrer</button>
+        <button id="btnCloseCorrective" class="secondary">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ONGLET PATRON -->
+<section id="patron" class="panel">
+  <h2>👑 Menu Patron</h2>
+  <div class="small">Accès protégé par code PIN. Ce menu contient la gestion des employés et l’inspection.</div>
+
+  <div id="patronLocked" class="card warn">
+    <div class="card-title">Menu verrouillé</div>
+    <div class="small">Clique sur “Déverrouiller” et saisis le code PIN.</div>
+    <div class="actions">
+      <button id="btnPatronUnlock">🔓 Déverrouiller</button>
+    </div>
+    <div class="small">PIN par défaut : <b>1234</b> (à changer).</div>
+  </div>
+
+  <div id="patronContent" style="display:none;">
+    <div class="card">
+      <div class="card-title">👤 Gestion des employés</div>
+      <div class="small">Ajouter / supprimer des employés (réservé Patron).</div>
+      
+    <div class="topbar-item">
+      <div class="small">Gestion employés</div>
+      <div class="row" style="margin:0">
+        <input id="newEmployeeName" type="text" placeholder="Nom" />
+        <button id="btnAddEmployee" class="secondary">+</button>
+        <button id="btnDeleteEmployee" class="secondary">🗑️</button>
+      </div>
+      
+    </div>
+
+    <div class="card ok">
+      <div class="card-title">Accès patron actif</div>
+      <div class="small">Les onglets “Employés” et “Inspection” sont maintenant accessibles.</div>
+      <div class="actions">
+        <button id="btnPatronLock" class="secondary">🔒 Reverrouiller</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Accès rapides</div>
+      <div class="actions">
+        <button id="btnOpenEmployees">👤 Gestion employés</button>
+        <button id="btnOpenInspection">🧾 Inspection</button>
+        <button id="btnOpenStats" class="secondary">📊 Stats</button>
+        <button id="btnOpenSuivi" class="secondary">✅ Suivi</button>
+</div>
+      <div class="small">Astuce : utilise “Inspection” pour générer un rapport complet 1 clic.</div>
+    </div>
+<div class="card">
+      
+    <div class="card">
+      <div class="card-title">⏱️ Durée avant reverrouillage automatique</div>
+      <div class="small">Le menu Patron se reverrouille après inactivité.</div>
+      <div class="row row-split">
+        <div>
+          <select id="patronLockMinutes">
+            <option value="2">2 minutes</option>
+            <option value="5" selected>5 minutes</option>
+            <option value="10">10 minutes</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+<div class="card-title">Changer le PIN</div>
+
+      <div class="row row-split">
+        <div>
+          <div class="small">Nouveau PIN (4 à 8 chiffres)</div>
+          <input id="patronNewPin" type="password" inputmode="numeric" placeholder="Ex : 2580">
+        </div>
+        <div>
+          <div class="small">Confirmer</div>
+          <input id="patronNewPin2" type="password" inputmode="numeric" placeholder="Répéter">
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btnPatronChangePin" class="secondary">💾 Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MODAL PIN PATRON -->
+<div id="patronPinModal" class="modal" style="display:none;">
+  <div class="modal-card">
+    <div class="modal-title">🔒 Code Patron</div>
+    <div class="small">Saisis le PIN pour déverrouiller.</div>
+    <div class="row">
+      <div style="flex:1;">
+        <input id="patronPinInput" type="password" inputmode="numeric" placeholder="PIN">
+      </div>
+    </div>
+    <div class="actions" style="justify-content:flex-end;">
+      <button id="btnPatronPinOk">OK</button>
+      <button id="btnPatronPinCancel" class="secondary">Annuler</button>
+    </div>
+    <div id="patronPinError" class="small" style="color:#c0392b; display:none; margin-top:6px;">PIN incorrect.</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script defer src="./app.js?v=1"></script>
+</body>
+</html>
