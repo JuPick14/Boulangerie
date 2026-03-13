@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <header style="
+display:flex;
+align-items:center;
+justify-content:center;
+gap:15px;
+padding:16px;
+border-bottom:1px solid #e5e5e5;
+background:#ffffff;
+box-shadow:0 2px 6px rgba(0,0,0,0.06);
+position:relative;
+">
+
+  <img src="logo.png" style="width:60px;height:60px;">
+
+  <div style="text-align:center;">
+    <div style="font-weight:700;font-size:24px;">
+      Boulangerie Pâtisserie Cointe
+    </div>
+
+    <div style="font-size:14px;color:#666;margin-top:2px;">
+      Application de suivi HACCP
+    </div>
+  </div>
+
+  <div style="
+  position:absolute;
+  right:18px;
+  top:18px;
+  font-size:13px;
+  color:#666;
+  ">
+    V14
+  </div>
+
+</header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Boulangerie Pâtisserie Cointe – Gestion</title>
+
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="./manifest.json" />
+
+  <meta name="theme-color" content="#2ecc71" />
+</head>
+<body>
+
+    <div class="topbar-item">
+      <div class="small">Employé (obligatoire)</div>
+      <select id="employeeSelect"></select>
+    </div>
+    <div class="topbar-item">
+      <div class="small">Gestion employés</div>
+      <div class="row" style="margin:0">
+        <input id="newEmployeeName" type="text" placeholder="Nom" />
+        <button id="btnAddEmployee" class="secondary">+</button>
+        <button id="btnDeleteEmployee" class="secondary">🗑️</button>
+      </div>
+      <div class="small">🗑️ supprime de la liste (historique inchangé)</div>
+    </div>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="today">📅 Aujourd’hui <span id="todayBadge" class="badge" style="display:none;">!</span></button>
+    <button class="tab" data-tab="temperatures">🌡️ Températures</button>
+    <button class="tab" data-tab="hygiene">🧹 Hygiène</button>
+    <button class="tab" data-tab="notes">📝 Notes</button>
+    <button class="tab" data-tab="stats">📊 Stats</button>
+    <button class="tab" data-tab="inspection">🧾 Inspection</button>
+  </nav>
+</header>
+
+<section id="today" class="panel active">
+  <div class="dashboard-grid">
+    <div class="big-card">
+      <div class="big-card-label">Températures matin</div>
+      <div id="todayTempsMorning" class="big-card-pill pill warn">À faire</div>
+    </div>
+
+    <div class="big-card">
+      <div class="big-card-label">Températures après-midi</div>
+      <div id="todayTempsAfternoon" class="big-card-pill pill warn">À faire</div>
+    </div>
+
+    <div class="big-card">
+      <div class="big-card-label">Hygiène</div>
+      <div id="todayHygiene" class="big-card-pill pill warn">À faire</div>
+      <div class="big-card-sub">
+        <span id="todayHygieneWhen">—</span>
+      </div>
+    </div>
+
+    <div class="big-card">
+      <div class="big-card-label">Conformité du jour</div>
+      <div id="todayConformity" class="big-card-pill pill warn">En attente</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">À faire aujourd’hui</div>
+    <div id="todayMissing" class="today-missing">Températures matin · Températures après-midi · Hygiène</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Note du jour</div>
+    <textarea id="todayNote" rows="4" placeholder="Écrire une remarque, un incident, une observation..."></textarea>
+    <div class="row" style="margin-top:10px;">
+      <button id="btnSaveTodayNote" type="button">Enregistrer la note</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Notifications</div>
+    <div id="notifStatus" class="notif-status">Vérification...</div>
+
+    <div class="row" style="margin-top:10px; gap:10px; flex-wrap:wrap;">
+      <button id="btnEnableNotif" type="button">Activer les notifications</button>
+      <button id="btnTestNotif" type="button">Tester la notification</button>
+    </div>
+  </div>
+
+  <div class="quick-actions">
+    <button id="btnGotoTemps" class="quick-btn" type="button">Saisir températures</button>
+    <button id="btnGotoHygiene" class="quick-btn" type="button">Saisir hygiène</button>
+  </div>
+</section>
+
+<section id="temperatures" class="panel">
+  <div class="row row-split">
+    <div>
+      <label for="periode" class="label">Période</label>
+      <select id="periode">
+        <option value="matin">Matin</option>
+        <option value="apres-midi">Après-midi</option>
+      </select>
+    </div>
+    <div>
+      <div class="small">Couleurs : 🟢 OK · 🟠 tolérance ±2°C · 🔴 alerte</div>
+    </div>
+  </div>
+
+  <div id="zones"></div>
+
+  <div class="actions">
+    <button id="btnSaveTemps">💾 Enregistrer</button>
+    <button id="btnExportTempsCSV">📄 Export CSV</button>
+    <button id="btnExportTempsPDF">🖨️ Export PDF</button>
+  </div>
+
+</section>
+
+<section id="hygiene" class="panel">
+  <h2>Hygiène / Nettoyage</h2>
+  <div class="row row-split">
+    <div>
+      <label for="hygieneDate" class="label">Date</label>
+      <input id="hygieneDate" type="date" />
+    </div>
+    <div>
+      <label for="hygienePeriode" class="label">Période</label>
+      <select id="hygienePeriode">
+        <option value="matin">Matin</option>
+        <option value="apres-midi">Après-midi</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Employé</div>
+    <div class="small">Employé sélectionné : <b><span id="hygieneEmp">—</span></b></div>
+  </div>
+
+  <div class="small">Plan prêt boulangerie/pâtisserie (quotidien + hebdo + mensuel).</div>
+  <div id="taches"></div>
+
+  <div class="actions">
+    <button id="btnSaveHygiene">💾 Enregistrer</button>
+    <button id="btnExportHygieneCSV">📄 Export CSV</button>
+    <button id="btnExportHygienePDF">🖨️ Export PDF</button>
+  </div>
+</section>
+
+<section id="notes" class="panel">
+  <h2>Notes / Observations</h2>
+
+  <div class="row">
+    <label for="notesDate" class="label">Date</label>
+    <input id="notesDate" type="date" />
+  </div>
+
+  <textarea id="notesTexte" rows="10" placeholder="Ex : anomalie température, intervention technicien, nettoyage exceptionnel..."></textarea>
+
+  <div class="actions">
+    <button id="btnSaveNotes">💾 Enregistrer</button>
+    <button id="btnExportNotesCSV">📄 Export CSV</button>
+    <button id="btnExportNotesPDF">🖨️ Export PDF</button>
+  </div>
+
+  <h3>Historique</h3>
+  <div id="notesListe"></div>
+</section>
+
+<section id="stats" class="panel">
+  <h2>Statistiques mensuelles</h2>
+  <div class="row row-split">
+    <div>
+      <label class="label">Mois</label>
+      <input id="statsMonth" type="month" />
+    </div>
+    <div>
+      <button id="btnRefreshStats" class="secondary">🔄 Actualiser</button>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Températures</div>
+      <div id="statsTemps" class="small"></div>
+      <canvas id="chartStatsTemps" height="220"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Hygiène</div>
+      <div id="statsHyg" class="small"></div>
+      <canvas id="chartStatsHyg" height="220"></canvas>
+    </div>
+  </div>
+
+    <div class="card">
+      <div class="card-title">Notes</div>
+      <div id="statsNotes" class="small"></div>
+    </div>
+  </div>
+</section>
+
+<section id="inspection" class="panel">
+  <h2>Rapport inspection sanitaire</h2>
+  <div class="small">Génère un PDF propre (températures, hygiène, inventaire, notes) pour un mois donné.</div>
+  <div class="row row-split">
+    <div>
+      <label class="label">Mois</label>
+      <input id="inspMonth" type="month" />
+    </div>
+    <div>
+      <button id="btnGenerateInspection" class="secondary">🧾 Générer PDF inspection</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Options</div>
+    <div class="row">
+      <label><input type="checkbox" id="inspIncludeNotes" checked /> Inclure notes</label>
+    </div>
+  </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="app.js"></script>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js");
+    });
+  }
+</script>
+</body>
+</html>
