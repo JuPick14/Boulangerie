@@ -69,6 +69,7 @@ position:relative;
     <button class="tab" data-tab="notes">📝 Notes</button>
     <button class="tab" data-tab="stats">📊 Stats</button>
     <button class="tab" data-tab="inspection">🧾 Inspection</button>
+    <button class="tab" data-tab="reception">🚚 Réception</button>
   </nav>
 </header>
 
@@ -253,6 +254,125 @@ position:relative;
     </div>
   </div>
 </section>
+
+<section id="reception" class="panel">
+
+  <div class="reception-card">
+    <div class="card-title">Nouvelle réception</div>
+
+    <div class="row row-split">
+      <div>
+        <label for="recDate" class="label">Date</label>
+        <input type="date" id="recDate">
+      </div>
+      <div>
+        <label for="recSupplier" class="label">Fournisseur</label>
+        <select id="recSupplier"></select>
+      </div>
+    </div>
+
+    <div class="row row-split">
+      <div>
+        <label for="recProduct" class="label">Produit</label>
+        <select id="recProduct"></select>
+      </div>
+      <div>
+        <label for="recQty" class="label">Quantité</label>
+        <input type="text" id="recQty" placeholder="Ex : 6 briques">
+      </div>
+    </div>
+
+    <div class="row row-split">
+      <div>
+        <label for="recLot" class="label">N° de lot</label>
+        <input type="text" id="recLot" placeholder="Ex : L45872">
+      </div>
+      <div>
+        <label for="recDlc" class="label">DLC / DLUO</label>
+        <input type="date" id="recDlc">
+      </div>
+    </div>
+
+    <div class="row row-split">
+      <div>
+        <label for="recTemp" class="label">Température à réception (°C)</label>
+        <input type="number" step="0.1" id="recTemp" placeholder="Ex : 3.2">
+      </div>
+      <div>
+        <label for="recComment" class="label">Commentaire</label>
+        <input type="text" id="recComment" placeholder="Ex : Carton OK">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="btnSaveReception">💾 Enregistrer</button>
+    </div>
+
+    <div class="reception-toolbar">
+      <button id="btnToggleReceptionSettings" type="button" class="secondary-btn">
+        ⚙️ Gérer fournisseurs / produits
+      </button>
+    </div>
+  </div>
+
+  <div id="receptionSettings" class="reception-card" style="display:none;">
+    <div class="card-title">Gestion des listes</div>
+
+    <div class="row row-split">
+  <div>
+    <label for="newSupplierName" class="label">Ajouter un fournisseur</label>
+    <input type="text" id="newSupplierName" placeholder="Ex : Transgourmet">
+  </div>
+
+  <div class="actions" style="align-items:end;">
+    <button id="btnAddSupplier" type="button">➕ Ajouter</button>
+  </div>
+</div>
+
+<div class="row row-split">
+  <div>
+    <label for="supplierDelete" class="label">Supprimer un fournisseur</label>
+    <select id="supplierDelete"></select>
+  </div>
+
+  <div class="actions" style="align-items:end;">
+    <button id="btnDeleteSupplier" type="button">🗑 Supprimer</button>
+  </div>
+</div>
+
+
+    <div class="row row-split">
+  <div>
+    <label for="newProductName" class="label">Ajouter un produit</label>
+    <input type="text" id="newProductName" placeholder="Ex : Crème liquide">
+  </div>
+
+  <div class="actions" style="align-items:end;">
+    <button id="btnAddProductReception" type="button">➕ Ajouter</button>
+  </div>
+</div>
+
+<div class="row row-split">
+  <div>
+    <label for="productDelete" class="label">Supprimer un produit</label>
+    <select id="productDelete"></select>
+  </div>
+
+  <div class="actions" style="align-items:end;">
+    <button id="btnDeleteProductReception" type="button">🗑 Supprimer</button>
+  </div>
+</div>
+
+  </div>
+
+  <div class="reception-card">
+    <div class="card-title">Historique des réceptions</div>
+    <div id="receptionList"></div>
+  </div>
+
+</section>
+
+
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

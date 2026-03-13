@@ -237,3 +237,42 @@ header div:first-of-type{
 }
 
 }
+.reception-toolbar{
+  display:flex;
+  justify-content:flex-end;
+  margin:10px 0 14px;
+}
+
+.secondary-btn{
+  border:none;
+  border-radius:12px;
+  padding:10px 14px;
+  font-size:15px;
+  font-weight:600;
+  cursor:pointer;
+  background:#f1f3f5;
+  color:#333;
+  box-shadow:0 1px 4px rgba(0,0,0,0.06);
+}
+
+.secondary-btn:hover{
+  transform:translateY(-1px);
+}
+
+.reception-card{
+  background:#fff;
+  border-radius:18px;
+  padding:16px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.05);
+  margin-bottom:16px;
+}
+
+.reception-card .card-title{
+  font-size:20px;
+  font-weight:700;
+  margin-bottom:14px;
+}
+
+#receptionList .card{
+  margin-bottom:12px;
+}

@@ -1,4 +1,4 @@
-const LS={temps:"releves_temps",hygiene:"releves_hygiene",inv:"releves_inventaire",notes:"releves_notes",employees:"employees_list",bakery:"bakery_name"};
+const LS={temps:"releves_temps",hygiene:"releves_hygiene",inv:"releves_inventaire",notes:"releves_notes",employees:"employees_list",bakery:"bakery_name",reception:"reception_list",suppliers:"suppliers_list",products:"reception_products_list"};
 const logoUrl = "./logo.png";
 
 function todayISO(){const d=new Date();const yyyy=d.getFullYear();const mm=String(d.getMonth()+1).padStart(2,"0");const dd=String(d.getDate()).padStart(2,"0");return `${yyyy}-${mm}-${dd}`;}
@@ -97,6 +97,7 @@ function openTab(id){
   const panel=document.getElementById(id);
   if(panel) panel.classList.add("active");
   if(id==="notes") renderNotesList();
+  if(id==="reception") renderReceptionList();
   if(id==="stats") refreshStats();
   if(id==="today") refreshToday();
 }
@@ -729,6 +730,235 @@ document.getElementById("btnGenerateInspection").addEventListener("click",()=>{
   doc.save(`inspection_${bakery.split(" ").join("_")}_${m}.pdf`);
   });
 });
+
+/******** Réception marchandises ********/
+const recDate=document.getElementById("recDate");
+const recSupplier=document.getElementById("recSupplier");
+const recProduct=document.getElementById("recProduct");
+const recQty=document.getElementById("recQty");
+const recLot=document.getElementById("recLot");
+const recDlc=document.getElementById("recDlc");
+const recTemp=document.getElementById("recTemp");
+const recComment=document.getElementById("recComment");
+const receptionList=document.getElementById("receptionList");
+const newSupplierName=document.getElementById("newSupplierName");
+const btnAddSupplier=document.getElementById("btnAddSupplier");
+const newProductName=document.getElementById("newProductName");
+const btnAddProductReception=document.getElementById("btnAddProductReception");
+const btnToggleReceptionSettings=document.getElementById("btnToggleReceptionSettings");
+const receptionSettings=document.getElementById("receptionSettings");
+const supplierDelete=document.getElementById("supplierDelete");
+const productDelete=document.getElementById("productDelete");
+
+const btnDeleteSupplier=document.getElementById("btnDeleteSupplier");
+const btnDeleteProductReception=document.getElementById("btnDeleteProductReception");
+
+
+btnToggleReceptionSettings?.addEventListener("click",()=>{
+  if(!receptionSettings) return;
+
+  const isHidden = receptionSettings.style.display === "none";
+
+  receptionSettings.style.display = isHidden ? "block" : "none";
+  btnToggleReceptionSettings.textContent = isHidden
+    ? "⚙️ Masquer fournisseurs / produits"
+    : "⚙️ Gérer fournisseurs / produits";
+});
+
+
+
+function loadReceptionProducts(){
+  const saved=readLS(LS.products);
+  if(saved.length) return saved;
+
+  const def=["Crème liquide","Beurre","Jambon","Fromage","Chocolat","Ovoproduits"];
+  writeLS(LS.products,def);
+  return def;
+}
+
+function renderReceptionProducts(){
+  if(!recProduct) return;
+
+  const list=loadReceptionProducts();
+
+  recProduct.innerHTML="";
+  productDelete.innerHTML="";
+
+  list.forEach(name=>{
+    const opt=document.createElement("option");
+    opt.value=name;
+    opt.textContent=name;
+
+    recProduct.appendChild(opt.cloneNode(true));
+    productDelete.appendChild(opt);
+  });
+}
+btnDeleteProductReception?.addEventListener("click",()=>{
+  const name=productDelete.value;
+
+  if(!confirm("Supprimer ce produit ?")) return;
+
+  let list=loadReceptionProducts();
+  list=list.filter(n=>n!==name);
+
+  writeLS(LS.products,list);
+
+  renderReceptionProducts();
+});
+
+
+btnAddProductReception?.addEventListener("click",()=>{
+  const name=(newProductName?.value||"").trim();
+  if(!name) return alert("Écris un nom de produit 🙂");
+
+  const list=loadReceptionProducts();
+  if(list.some(n=>n.toLowerCase()===name.toLowerCase())){
+    return alert("Ce produit existe déjà.");
+  }
+
+  list.push(name);
+  writeLS(LS.products,list);
+
+  if(newProductName) newProductName.value="";
+  renderReceptionProducts();
+  recProduct.value=name;
+
+  alert("Produit ajouté ✔️");
+});
+
+function loadSuppliers(){
+  const saved=readLS(LS.suppliers);
+  if(saved.length) return saved;
+
+  const def=["Labo 80","Moulin Bourgeois"];
+  writeLS(LS.suppliers,def);
+  return def;
+}
+
+function renderSuppliers(){
+  if(!recSupplier) return;
+
+  const list=loadSuppliers();
+
+  recSupplier.innerHTML="";
+  supplierDelete.innerHTML="";
+
+  list.forEach(name=>{
+    const opt=document.createElement("option");
+    opt.value=name;
+    opt.textContent=name;
+
+    recSupplier.appendChild(opt.cloneNode(true));
+    supplierDelete.appendChild(opt);
+  });
+}
+btnDeleteSupplier?.addEventListener("click",()=>{
+  const name=supplierDelete.value;
+
+  if(!confirm("Supprimer ce fournisseur ?")) return;
+
+  let list=loadSuppliers();
+  list=list.filter(n=>n!==name);
+
+  writeLS(LS.suppliers,list);
+
+  renderSuppliers();
+});
+
+
+btnAddSupplier?.addEventListener("click",()=>{
+  const name=(newSupplierName?.value||"").trim();
+  if(!name) return alert("Écris un nom de fournisseur 🙂");
+
+  const list=loadSuppliers();
+  if(list.some(n=>n.toLowerCase()===name.toLowerCase())){
+    return alert("Ce fournisseur existe déjà.");
+  }
+
+  list.push(name);
+  writeLS(LS.suppliers,list);
+
+  if(newSupplierName) newSupplierName.value="";
+  renderSuppliers();
+  recSupplier.value=name;
+
+  alert("Fournisseur ajouté ✔️");
+});
+
+if(recDate) recDate.value=todayISO();
+
+function renderReceptionList(){
+  if(!receptionList) return;
+
+  const rows=readLS(LS.reception).slice().reverse();
+  receptionList.innerHTML="";
+
+  if(!rows.length){
+    receptionList.innerHTML=`<div class="small">Aucune réception enregistrée.</div>`;
+    return;
+  }
+
+  rows.slice(0,30).forEach(r=>{
+    const card=document.createElement("div");
+    card.className="card";
+
+    card.innerHTML=`
+      <div class="card-title">${r.date} (${r.datetime})</div>
+      <div class="small"><b>Fournisseur :</b> ${r.supplier || "-"}</div>
+      <div class="small"><b>Produit :</b> ${r.product || "-"}</div>
+      <div class="small"><b>Quantité :</b> ${r.quantity || "-"}</div>
+      <div class="small"><b>Lot :</b> ${r.lot || "-"}</div>
+      <div class="small"><b>DLC :</b> ${r.dlc || "-"}</div>
+      <div class="small"><b>Température :</b> ${r.temperature || "-"}${r.temperature ? "°C" : ""}</div>
+      <div class="small"><b>Commentaire :</b> ${r.comment || "-"}</div>
+      <div class="small"><b>Employé :</b> ${r.employee || "-"}</div>
+    `;
+
+    receptionList.appendChild(card);
+  });
+}
+
+document.getElementById("btnSaveReception")?.addEventListener("click",()=>{
+  const emp=requireEmployee();
+  if(!emp) return;
+
+  const supplier=(recSupplier?.value||"").trim();
+  const product=(recProduct?.value||"").trim();
+
+  if(!supplier || !product){
+    return alert("Fournisseur et produit sont obligatoires 🙂");
+  }
+
+  const row={
+    date:recDate?.value||todayISO(),
+    datetime:nowLocale(),
+    supplier,
+    product,
+    quantity:(recQty?.value||"").trim(),
+    lot:(recLot?.value||"").trim(),
+    dlc:recDlc?.value||"",
+    temperature:recTemp?.value||"",
+    comment:(recComment?.value||"").trim(),
+    employee:emp
+  };
+
+  const rows=readLS(LS.reception);
+  rows.push(row);
+  writeLS(LS.reception,rows);
+
+  if(recSupplier) recSupplier.value="";
+  if(recProduct) recProduct.value="";
+  if(recQty) recQty.value="";
+  if(recLot) recLot.value="";
+  if(recDlc) recDlc.value="";
+  if(recTemp) recTemp.value="";
+  if(recComment) recComment.value="";
+  if(recDate) recDate.value=todayISO();
+
+  renderReceptionList();
+  alert("Réception enregistrée ✔️");
+});
+
 /******** Notifications rappels températures ********/
 const NOTIF_STORAGE_KEY = "haccp_notif_sent";
 
@@ -899,6 +1129,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnTestNotif")?.addEventListener("click", testNotification);
 
   updateNotifStatusUI();
+  renderReceptionList();
+  renderSuppliers();
+  renderReceptionProducts();
   openTab("today");
 });
 console.log("APP JS chargé");
