@@ -361,7 +361,7 @@ document.getElementById("btnExportTempsPDF").addEventListener("click",()=>{
     const doc = new jsPDF();
 
     if(logoData){
-      doc.addImage(logoData, "PNG", 10, 8, 18, 18);
+      doc.addImage(logoData, "PNG", 10, 8, 22, 22);
     }
 
     const bakery = bakeryName.value || "Boulangerie";
@@ -546,7 +546,7 @@ document.getElementById("btnExportHygienePDF").addEventListener("click",()=>{
     const doc = new jsPDF();
 
     if(logoData){
-      doc.addImage(logoData, "PNG", 10, 8, 18, 18);
+      doc.addImage(logoData, "PNG", 10, 8, 22, 22);
     }
 
     doc.setFontSize(16);
@@ -624,7 +624,7 @@ document.getElementById("btnGenerateInspection").addEventListener("click",()=>{
     const bakery=bakeryName.value||"Boulangerie";
 
     if(logoData){
-      doc.addImage(logoData, "PNG", 10, 8, 18, 18);
+      doc.addImage(logoData, "PNG", 10, 8, 22, 22);
     }
 
     doc.setFontSize(18);
