@@ -136,7 +136,7 @@
     <button id="btnExportTempsCSV">📄 Export CSV</button>
     <button id="btnExportTempsPDF">🖨️ Export PDF</button>
   </div>
-  
+
 </section>
 
 <section id="hygiene" class="panel">
@@ -192,6 +192,7 @@
 
 <section id="stats" class="panel">
   <h2>Statistiques mensuelles</h2>
+
   <div class="row row-split">
     <div>
       <label class="label">Mois</label>
@@ -202,24 +203,45 @@
     </div>
   </div>
 
-  <div class="grid2">
+  <div class="stats-mini-grid">
+    <div class="stats-summary-card">
+      <div class="stats-summary-title">Températures</div>
+      <div id="statsTempsCount" class="stats-summary-value">0</div>
+      <div class="stats-summary-sub">relevés du mois</div>
+    </div>
+
+    <div class="stats-summary-card">
+      <div class="stats-summary-title">Hygiène</div>
+      <div id="statsHygCount" class="stats-summary-value">0</div>
+      <div class="stats-summary-sub">relevés du mois</div>
+    </div>
+
+    <div class="stats-summary-card">
+      <div class="stats-summary-title">Notes</div>
+      <div id="statsNotesCount" class="stats-summary-value">0</div>
+      <div class="stats-summary-sub">entrées du mois</div>
+    </div>
+  </div>
+
+  <div class="stats-charts-grid">
     <div class="card">
       <div class="card-title">Températures</div>
       <div id="statsTemps" class="small"></div>
-      <canvas id="chartStatsTemps" height="220"></canvas>
+      <canvas id="chartStatsTemps" height="160"></canvas>
     </div>
 
     <div class="card">
       <div class="card-title">Hygiène</div>
       <div id="statsHyg" class="small"></div>
-      <canvas id="chartStatsHyg" height="220"></canvas>
+      <canvas id="chartStatsHyg" height="160"></canvas>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-title">Notes</div>
-    <div id="statsNotes" class="small"></div>
-  </div>
+  <div class="card stats-notes-card">
+  <div class="card-title">Notes</div>
+  <div class="small">Résumé des notes enregistrées sur la période sélectionnée.</div>
+  <div id="statsNotes" class="small" style="margin-top:10px;"></div>
+</div>
 </section>
 
 <section id="inspection" class="panel">

@@ -601,6 +601,49 @@ document.getElementById("btnExportHygienePDF").addEventListener("click",()=>{
   });
 });
 
+/******** Notes ********/
+
+function renderNotesList(){
+  const box = document.getElementById("notesListe");
+  if(!box) return;
+
+  const rows = readLS(LS.notes).slice().reverse();
+  box.innerHTML = "";
+
+  if(!rows.length){
+    box.innerHTML = `
+      <div class="note-history-card">
+        <div class="small">Aucune note enregistrée.</div>
+      </div>
+    `;
+    return;
+  }
+
+  rows.slice(0, 50).forEach(r => {
+    const card = document.createElement("div");
+    card.className = "note-history-card";
+
+    const dateValue = r.date ? formatDateFR(r.date) : "-";
+    const datetimeValue = r.datetime || "-";
+    const textValue = (r.texte || "").trim() || "—";
+    const isDaily = r.daily === true;
+
+    card.innerHTML = `
+      <div class="note-history-top">
+        <div>
+          <div class="note-history-date">${dateValue}</div>
+          ${isDaily ? `<div class="note-history-badge">📌 Note du jour</div>` : ``}
+        </div>
+        <div class="note-history-datetime">${datetimeValue}</div>
+      </div>
+
+      <div class="note-history-text">${textValue}</div>
+    `;
+
+    box.appendChild(card);
+  });
+}
+
 /******** Stats ********/
 const statsMonth=document.getElementById("statsMonth"); statsMonth.value=monthISO();
 document.getElementById("btnRefreshStats").addEventListener("click",refreshStats);
@@ -612,6 +655,14 @@ function refreshStats(){
   const hyg=readLS(LS.hygiene).filter(r=>(r.date||"").startsWith(m));
   const notes=readLS(LS.notes).filter(r=>(r.date||"").startsWith(m));
 
+  const elTempsCount = document.getElementById("statsTempsCount");
+  const elHygCount = document.getElementById("statsHygCount");
+  const elNotesCount = document.getElementById("statsNotesCount");
+
+  if(elTempsCount) elTempsCount.textContent = temps.length;
+  if(elHygCount) elHygCount.textContent = hyg.length;
+  if(elNotesCount) elNotesCount.textContent = notes.length;
+
   let ok=0,warn=0,bad=0;
   temps.forEach(r=>{
     if(r.degivrage === "oui") return;
@@ -622,7 +673,26 @@ function refreshStats(){
   document.getElementById("statsTemps").textContent=`Entrées: ${temps.length} | OK: ${ok} | Limite: ${warn} | Alerte: ${bad}`;
   const ctxT=document.getElementById("chartStatsTemps").getContext("2d");
   if(chartStatsTemps) chartStatsTemps.destroy();
-  chartStatsTemps=new Chart(ctxT,{type:"bar",data:{labels:["OK","Limite","Alerte"],datasets:[{label:"Températures",data:[ok,warn,bad]}]},options:{scales:{y:{beginAtZero:true}}}});
+  chartStatsTemps = new Chart(ctxT,{
+  type:"bar",
+  data:{
+    labels:["OK","Limite","Alerte"],
+    datasets:[{
+      label:"Températures",
+      data:[ok,warn,bad],
+      borderRadius:8
+    }]
+  },
+  options:{
+    responsive:true,
+    plugins:{
+      legend:{display:false}
+    },
+    scales:{
+      y:{beginAtZero:true}
+    }
+  }
+});
 
   let totalItems=0, doneItems=0;
   hyg.forEach(r=>(r.items||[]).forEach(it=>{totalItems++; if((it.fait||"")==="oui") doneItems++;}));
@@ -630,9 +700,31 @@ function refreshStats(){
   document.getElementById("statsHyg").textContent=`Relevés: ${hyg.length} | Tâches faites: ${doneItems}/${totalItems} (${pct}%)`;
   const ctxH=document.getElementById("chartStatsHyg").getContext("2d");
   if(chartStatsHyg) chartStatsHyg.destroy();
-  chartStatsHyg=new Chart(ctxH,{type:"bar",data:{labels:["Fait","Non fait"],datasets:[{label:"Hygiène",data:[doneItems,Math.max(totalItems-doneItems,0)]}]},options:{scales:{y:{beginAtZero:true}}}});
+  chartStatsHyg = new Chart(ctxH,{
+  type:"bar",
+  data:{
+    labels:["Fait","Non fait"],
+    datasets:[{
+      label:"Hygiène",
+      data:[doneItems,Math.max(totalItems-doneItems,0)],
+      borderRadius:8
+    }]
+  },
+  options:{
+    responsive:true,
+    plugins:{
+      legend:{display:false}
+    },
+    scales:{
+      y:{beginAtZero:true}
+    }
+  }
+});
 
-  document.getElementById("statsNotes").textContent=`Notes: ${notes.length}`;
+  document.getElementById("statsNotes").textContent =
+  notes.length
+    ? `${notes.length} note(s) enregistrée(s) pour ${formatMonthFR(m)}.`
+    : `Aucune note enregistrée pour ${formatMonthFR(m)}.`;
 }
 refreshStats();
 
