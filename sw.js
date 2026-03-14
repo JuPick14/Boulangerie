@@ -27,7 +27,20 @@ self.addEventListener("activate", (event) => {
           .filter((key) => key !== CACHE_NAME)
           .map((key) => caches.delete(key))
       )
-    ).then(() => self.clients.claim())
+    ).then(async () => {
+      await self.clients.claim();
+
+      const clientsList = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true
+      });
+
+      clientsList.forEach((client) => {
+        client.postMessage({
+          type: "SW_UPDATED"
+        });
+      });
+    })
   );
 });
 

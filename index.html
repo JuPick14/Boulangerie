@@ -51,7 +51,7 @@ position:relative;
   ">
     V14
   </div>
-  
+
 </header>
 
 
@@ -389,8 +389,24 @@ position:relative;
 
 <script>
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js");
+    window.addEventListener("load", async () => {
+      try {
+        const reg = await navigator.serviceWorker.register("./sw.js");
+
+        if (reg.update) {
+          reg.update();
+        }
+
+        navigator.serviceWorker.addEventListener("message", (event) => {
+          if (event.data && event.data.type === "SW_UPDATED") {
+            if (confirm("Une nouvelle version de l'application est disponible. Recharger maintenant ?")) {
+              window.location.reload();
+            }
+          }
+        });
+      } catch (err) {
+        console.error("Erreur enregistrement service worker :", err);
+      }
     });
   }
 </script>
