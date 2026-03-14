@@ -1,4 +1,4 @@
-const CACHE_NAME = "boulangerie-v149";
+const CACHE_NAME = "boulangerie-v150";
 
 const ASSETS = [
   "./",
