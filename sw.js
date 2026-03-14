@@ -1,4 +1,4 @@
-const CACHE_NAME = "boulangerie-v160";
+const CACHE_NAME = "boulangerie-v161";
 
 const ASSETS = [
   "./",
@@ -6,7 +6,10 @@ const ASSETS = [
   "./style.css",
   "./app.js",
   "./logo.png",
-  "./manifest.webmanifest"
+  "./manifest.webmanifest",
+  "./icon-180.png",
+  "./icon-192.png",
+  "./icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {
