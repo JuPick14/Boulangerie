@@ -17,68 +17,43 @@
 
 <body>
 
-<header style="
-display:flex;
-align-items:center;
-justify-content:center;
-gap:15px;
-padding:16px;
-border-bottom:1px solid #e5e5e5;
-background:#ffffff;
-box-shadow:0 2px 6px rgba(0,0,0,0.06);
-position:relative;
-">
+<header class="app-header">
+  <img src="logo.png" class="header-logo" alt="Logo">
 
-  <img src="logo.png" class="header-logo">
-
-
-  <div style="text-align:center;">
-    <div style="font-weight:700;font-size:24px;">
-      Boulangerie Pâtisserie Cointe
-    </div>
-
-    <div style="font-size:14px;color:#666;margin-top:2px;">
-      Application de suivi HACCP
-    </div>
+  <div class="header-center">
+    <div class="header-title">Boulangerie Pâtisserie Cointe</div>
+    <div class="header-subtitle">Application de suivi HACCP</div>
   </div>
 
-  <div style="
-  position:absolute;
-  right:18px;
-  top:18px;
-  font-size:13px;
-  color:#666;
-  ">
-    V14
-  </div>
-
+  <div class="header-version">V14</div>
 </header>
 
-
-    <div class="topbar-item">
-      <div class="small">Employé (obligatoire)</div>
-      <select id="employeeSelect"></select>
-    </div>
-    <div class="topbar-item">
-      <div class="small">Gestion employés</div>
-      <div class="row" style="margin:0">
-        <input id="newEmployeeName" type="text" placeholder="Nom" />
-        <button id="btnAddEmployee" class="secondary">+</button>
-        <button id="btnDeleteEmployee" class="secondary">🗑️</button>
-      </div>
-      <div class="small">🗑️ supprime de la liste (historique inchangé)</div>
-    </div>
+<section class="topbar">
+  <div class="topbar-item">
+    <div class="small">Employé (obligatoire)</div>
+    <select id="employeeSelect"></select>
   </div>
 
-  <nav class="tabs">
-    <button class="tab active" data-tab="today">📅 Aujourd’hui <span id="todayBadge" class="badge" style="display:none;">!</span></button>
-    <button class="tab" data-tab="temperatures">🌡️ Températures</button>
-    <button class="tab" data-tab="hygiene">🧹 Hygiène</button>
-    <button class="tab" data-tab="reception">🚚 Réception</button>
-    <button class="tab" data-tab="notes">📝 Notes</button>
-    <button class="tab" data-tab="stats">📊 Stats</button>
-    <button class="tab" data-tab="inspection">🧾 Inspection</button>
-  </nav>
+  <div class="topbar-item">
+    <div class="small">Gestion employés</div>
+    <div class="row" style="margin:0">
+      <input id="newEmployeeName" type="text" placeholder="Nom" />
+      <button id="btnAddEmployee" class="secondary">+</button>
+      <button id="btnDeleteEmployee" class="secondary">🗑️</button>
+    </div>
+    <div class="small">🗑️ supprime de la liste (historique inchangé)</div>
+  </div>
+</section>
+
+<nav class="tabs">
+  <button class="tab active" data-tab="today">📅 Aujourd’hui <span id="todayBadge" class="badge" style="display:none;">!</span></button>
+  <button class="tab" data-tab="temperatures">🌡️ Températures</button>
+  <button class="tab" data-tab="hygiene">🧹 Hygiène</button>
+  <button class="tab" data-tab="reception">🚚 Réception</button>
+  <button class="tab" data-tab="notes">📝 Notes</button>
+  <button class="tab" data-tab="stats">📊 Stats</button>
+  <button class="tab" data-tab="inspection">🧾 Inspection</button>
+</nav>
 </header>
 
 <section id="today" class="panel active">
@@ -96,8 +71,9 @@ position:relative;
     <div class="big-card">
       <div class="big-card-label">Hygiène</div>
       <div id="todayHygiene" class="big-card-pill pill warn">À faire</div>
+      <span id="todayHygieneWhen">—</span>
       <div class="big-card-sub">
-        <span id="todayHygieneWhen">—</span>
+  
       </div>
     </div>
 
@@ -137,16 +113,19 @@ position:relative;
 </section>
 
 <section id="temperatures" class="panel">
-  <div class="row row-split">
-    <div>
-      <label for="periode" class="label">Période</label>
-      <select id="periode">
-        <option value="matin">Matin</option>
-        <option value="apres-midi">Après-midi</option>
-      </select>
-    </div>
-    <div>
-      <div class="small">Couleurs : 🟢 OK · 🟠 tolérance ±2°C · 🔴 alerte</div>
+  <div class="card">
+    <div class="card-title">Relevé des températures</div>
+    <div class="row row-split">
+      <div>
+        <label for="periode" class="label">Période</label>
+        <select id="periode">
+          <option value="matin">Matin</option>
+          <option value="apres-midi">Après-midi</option>
+        </select>
+      </div>
+      <div>
+        <div class="small">Couleurs : 🟢 OK · 🟠 tolérance ±2°C · 🔴 alerte</div>
+      </div>
     </div>
   </div>
 
@@ -157,7 +136,7 @@ position:relative;
     <button id="btnExportTempsCSV">📄 Export CSV</button>
     <button id="btnExportTempsPDF">🖨️ Export PDF</button>
   </div>
-
+  
 </section>
 
 <section id="hygiene" class="panel">
@@ -229,6 +208,7 @@ position:relative;
       <div id="statsTemps" class="small"></div>
       <canvas id="chartStatsTemps" height="220"></canvas>
     </div>
+
     <div class="card">
       <div class="card-title">Hygiène</div>
       <div id="statsHyg" class="small"></div>
@@ -236,10 +216,9 @@ position:relative;
     </div>
   </div>
 
-    <div class="card">
-      <div class="card-title">Notes</div>
-      <div id="statsNotes" class="small"></div>
-    </div>
+  <div class="card">
+    <div class="card-title">Notes</div>
+    <div id="statsNotes" class="small"></div>
   </div>
 </section>
 
@@ -264,9 +243,9 @@ position:relative;
 </section>
 
 <section id="reception" class="panel">
-
   <div class="reception-card">
     <div class="card-title">Nouvelle réception</div>
+    <div class="small">Enregistrement rapide d’un produit livré avec contrôle HACCP.</div>
 
     <div class="row row-split">
       <div>
@@ -335,6 +314,7 @@ position:relative;
 
   <div id="receptionSettings" class="reception-card" style="display:none;">
     <div class="card-title">Gestion des listes</div>
+    <div class="small">Ajout ou suppression des fournisseurs, produits et catégories.</div>
 
     
 
@@ -411,6 +391,7 @@ position:relative;
 
     <div class="reception-card">
     <div class="card-title">Historique des réceptions</div>
+    <div class="small">Suivi chronologique des marchandises reçues.</div>
     <div id="receptionList"></div>
   </div>
 

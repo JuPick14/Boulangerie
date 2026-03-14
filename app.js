@@ -183,18 +183,21 @@ document.getElementById("btnGotoHygiene")?.addEventListener("click",()=>openTab(
 document.getElementById("btnSaveTodayNote")?.addEventListener("click",()=>{
   const texte=(todayNote?.value||"").trim();
   if(!texte) return alert("Écris une note avant d’enregistrer 🙂");
-  const rows=readLS(LS.notes).filter(r=>!(r.date===todayISO() && r.daily===true));
-  rows.push({date:todayISO(),datetime:nowLocale(),texte,daily:true});
-  writeLS(LS.notes,rows);
-  alert("Note du jour enregistrée ✔️");
-  const todayTab = document.querySelector('[data-tab="today"]');
 
-if(!ok){
-  todayTab.classList.add("warn");
-}else{
-  todayTab.classList.remove("warn");
-}
+  const rows=readLS(LS.notes).filter(r=>!(r.date===todayISO() && r.daily===true));
+  rows.push({
+    date:todayISO(),
+    datetime:nowLocale(),
+    texte,
+    daily:true
+  });
+
+  writeLS(LS.notes,rows);
+  refreshToday();
+  alert("Note du jour enregistrée ✔️");
 });
+
+
 
 function tempStatus(zone,temp){
   if(isNaN(temp)) return "muted";
@@ -212,37 +215,43 @@ function tempStatus(zone,temp){
 
 const zonesDiv=document.getElementById("zones");
 function renderZones(){
-  zonesDiv.innerHTML="";
+  zonesDiv.innerHTML = "";
 
-  zones.forEach((z,i)=>{
-    const card=document.createElement("div");
-    card.className="card";
+  zones.forEach((z,i) => {
+    const card = document.createElement("div");
+    card.className = "card";
 
-    const title=document.createElement("div");
-    title.className="card-title";
-    title.textContent=`${z.icon} ${z.nom}`;
+    const title = document.createElement("div");
+    title.className = "card-title";
+    title.textContent = `${z.icon} ${z.nom}`;
 
-    const input=document.createElement("input");
-    input.type="number";
-    input.step="0.1";
-    input.placeholder="°C";
-    input.id=`temp-${i}`;
+    const small = document.createElement("div");
+    small.className = "small";
+    small.textContent = z.type === "negatif"
+      ? `Température attendue : ≤ ${z.max}°C`
+      : `Température attendue : entre ${z.min}°C et ${z.max}°C`;
 
-    const row=document.createElement("div");
-    row.className="row";
-    row.style.marginTop="8px";
-    row.style.gap="8px";
+    const input = document.createElement("input");
+    input.type = "number";
+    input.step = "0.1";
+    input.placeholder = "Saisir la température";
+    input.id = `temp-${i}`;
 
-    const cb=document.createElement("input");
-    cb.type="checkbox";
-    cb.id=`degivrage-${i}`;
+    const row = document.createElement("div");
+    row.className = "row";
+    row.style.marginTop = "10px";
+    row.style.gap = "8px";
 
-    const lbl=document.createElement("label");
-    lbl.htmlFor=cb.id;
-    lbl.textContent="En dégivrage";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.id = `degivrage-${i}`;
+
+    const lbl = document.createElement("label");
+    lbl.htmlFor = cb.id;
+    lbl.textContent = "En dégivrage";
 
     function refreshCardState(){
-      const val=parseFloat(input.value);
+      const val = parseFloat(input.value);
 
       card.classList.remove("ok","warn","bad","muted");
 
@@ -255,10 +264,10 @@ function renderZones(){
 
       input.disabled = false;
 
-      const st=tempStatus(z,val);
-      if(st==="ok") card.classList.add("ok");
-      if(st==="warn") card.classList.add("warn");
-      if(st==="bad") card.classList.add("bad");
+      const st = tempStatus(z,val);
+      if(st === "ok") card.classList.add("ok");
+      if(st === "warn") card.classList.add("warn");
+      if(st === "bad") card.classList.add("bad");
     }
 
     input.addEventListener("input", refreshCardState);
@@ -268,6 +277,7 @@ function renderZones(){
     row.appendChild(lbl);
 
     card.appendChild(title);
+    card.appendChild(small);
     card.appendChild(input);
     card.appendChild(row);
 
@@ -482,21 +492,42 @@ function resetHygieneCheckboxes(){
   });
 }
 function renderTaches(){
-  tachesDiv.innerHTML="";
-  let idx=0;
-  hygienePlan.forEach(group=>{
-    const h=document.createElement("div"); h.className="section-title"; h.textContent=group.section;
+  tachesDiv.innerHTML = "";
+  let idx = 0;
+
+  hygienePlan.forEach(group => {
+    const h = document.createElement("div");
+    h.className = "section-title";
+    h.textContent = group.section;
     tachesDiv.appendChild(h);
-    group.items.forEach(t=>{
-      const card=document.createElement("div"); card.className="card";
-      const title=document.createElement("div"); title.className="card-title"; title.textContent=t;
-      const row=document.createElement("div"); row.className="row";
-      const cb=document.createElement("input"); cb.type="checkbox"; cb.id=`tache-${idx}`;
-      const lbl=document.createElement("label"); lbl.htmlFor=cb.id; lbl.textContent="Fait";
-      row.appendChild(cb); row.appendChild(lbl);
-      card.appendChild(title); card.appendChild(row);
+
+    group.items.forEach(t => {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const title = document.createElement("div");
+      title.className = "card-title";
+      title.textContent = t;
+
+      const row = document.createElement("div");
+      row.className = "row";
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.id = `tache-${idx}`;
+
+      const lbl = document.createElement("label");
+      lbl.htmlFor = cb.id;
+      lbl.textContent = "Tâche effectuée";
+
+      row.appendChild(cb);
+      row.appendChild(lbl);
+
+      card.appendChild(title);
+      card.appendChild(row);
+
       tachesDiv.appendChild(card);
-      idx+=1;
+      idx += 1;
     });
   });
 }
@@ -945,7 +976,11 @@ function renderReceptionList(){
   receptionList.innerHTML = "";
 
   if(!rows.length){
-    receptionList.innerHTML = `<div class="small">Aucune réception enregistrée.</div>`;
+    receptionList.innerHTML = `
+      <div class="reception-history-card">
+        <div class="small">Aucune réception enregistrée pour le moment.</div>
+      </div>
+    `;
     return;
   }
 
@@ -953,29 +988,70 @@ function renderReceptionList(){
     const card = document.createElement("div");
     card.className = "reception-history-card";
 
-    const tempValue = r.temperature ? `${r.temperature}°C` : "-";
+    const tempNum = parseFloat(r.temperature);
+    let tempClass = "rh-temp-muted";
+    let tempLabel = "-";
+
+    if(r.temperature !== "" && !isNaN(tempNum)){
+      tempLabel = `${tempNum}°C`;
+
+      if(tempNum <= 4){
+        tempClass = "rh-temp-ok";
+      }else if(tempNum <= 8){
+        tempClass = "rh-temp-warn";
+      }else{
+        tempClass = "rh-temp-bad";
+      }
+    }
+
     const dlcValue = r.dlc ? formatDateFR(r.dlc) : "-";
     const dateValue = r.date ? formatDateFR(r.date) : "-";
+    const commentValue = (r.comment || "").trim() ? r.comment : "Aucun commentaire";
 
     card.innerHTML = `
       <div class="reception-history-top">
-        <div class="reception-history-title">${r.product || "-"}</div>
+        <div>
+          <div class="reception-history-title">${r.product || "-"}</div>
+          <div class="small">${r.category || "Sans catégorie"}</div>
+        </div>
         <div class="reception-history-date">${dateValue} · ${r.datetime || "-"}</div>
       </div>
 
       <div class="reception-history-grid">
-        <div><span class="rh-label">Fournisseur</span><span class="rh-value">${r.supplier || "-"}</span></div>
-        <div><span class="rh-label">Quantité</span><span class="rh-value">${r.quantity || "-"}</span></div>
-        <div><span class="rh-label">Lot</span><span class="rh-value">${r.lot || "-"}</span></div>
-        <div><span class="rh-label">DLC</span><span class="rh-value">${dlcValue}</span></div>
-        <div><span class="rh-label">Température</span><span class="rh-value">${tempValue}</span></div>
-        <div><span class="rh-label">Employé</span><span class="rh-value">${r.employee || "-"}</span></div>
-        <div><span class="rh-label">Catégorie</span><span class="rh-value">${r.category || "-"}</span></div>
+        <div>
+          <span class="rh-label">Fournisseur</span>
+          <span class="rh-value">${r.supplier || "-"}</span>
+        </div>
+
+        <div>
+          <span class="rh-label">Quantité</span>
+          <span class="rh-value">${r.quantity || "-"}</span>
+        </div>
+
+        <div>
+          <span class="rh-label">Lot</span>
+          <span class="rh-value">${r.lot || "-"}</span>
+        </div>
+
+        <div>
+          <span class="rh-label">DLC / DLUO</span>
+          <span class="rh-value">${dlcValue}</span>
+        </div>
+
+        <div>
+          <span class="rh-label">Température</span>
+          <span class="rh-value ${tempClass}">${tempLabel}</span>
+        </div>
+
+        <div>
+          <span class="rh-label">Employé</span>
+          <span class="rh-value">${r.employee || "-"}</span>
+        </div>
       </div>
 
       <div class="reception-history-comment">
         <span class="rh-label">Commentaire</span>
-        <div class="rh-comment-text">${r.comment || "-"}</div>
+        <div class="rh-comment-text">${commentValue}</div>
       </div>
     `;
 
@@ -1096,14 +1172,13 @@ document.getElementById("btnSaveReception")?.addEventListener("click",()=>{
   rows.push(row);
   writeLS(LS.reception,rows);
 
-  if(recSupplier) recSupplier.value="";
-  if(recProduct) recProduct.value="";
-  if(recQty) recQty.value="";
-  if(recLot) recLot.value="";
-  if(recDlc) recDlc.value="";
-  if(recTemp) recTemp.value="";
-  if(recComment) recComment.value="";
-  if(recDate) recDate.value=todayISO();
+    if(recProduct) recProduct.selectedIndex = 0;
+  if(recQty) recQty.value = "";
+  if(recLot) recLot.value = "";
+  if(recDlc) recDlc.value = "";
+  if(recTemp) recTemp.value = "";
+  if(recComment) recComment.value = "";
+  if(recDate) recDate.value = todayISO();
 
   renderReceptionList();
   alert("Réception enregistrée ✔️");
@@ -1234,23 +1309,7 @@ function updateNotifStatusUI(){
   }
 }
 
-function requestNotificationPermission(){
-  if(!("Notification" in window)){
-    alert("Les notifications ne sont pas supportées sur cet appareil.");
-    updateNotifStatusUI();
-    return;
-  }
 
-  Notification.requestPermission().then(permission => {
-    updateNotifStatusUI();
-
-    if(permission === "granted"){
-      alert("Notifications activées ✔️");
-    }else if(permission === "denied"){
-      alert("Notifications refusées.");
-    }
-  });
-}
 
 function testNotification(){
   if(!("Notification" in window)){
