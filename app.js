@@ -1,4 +1,4 @@
-const LS={temps:"releves_temps",hygiene:"releves_hygiene",inv:"releves_inventaire",notes:"releves_notes",employees:"employees_list",bakery:"bakery_name",reception:"reception_list",suppliers:"suppliers_list",products:"reception_products_list"};
+  const LS={temps:"releves_temps",hygiene:"releves_hygiene",inv:"releves_inventaire",notes:"releves_notes",employees:"employees_list",bakery:"bakery_name",reception:"reception_list",suppliers:"suppliers_list",products:"reception_products_list",categories:"reception_categories_list"};
 const logoUrl = "./logo.png";
 
 function todayISO(){const d=new Date();const yyyy=d.getFullYear();const mm=String(d.getMonth()+1).padStart(2,"0");const dd=String(d.getDate()).padStart(2,"0");return `${yyyy}-${mm}-${dd}`;}
@@ -752,6 +752,14 @@ const productDelete=document.getElementById("productDelete");
 
 const btnDeleteSupplier=document.getElementById("btnDeleteSupplier");
 const btnDeleteProductReception=document.getElementById("btnDeleteProductReception");
+const recCategory=document.getElementById("recCategory");
+
+const newCategoryName=document.getElementById("newCategoryName");
+const btnAddCategory=document.getElementById("btnAddCategory");
+const categoryDelete=document.getElementById("categoryDelete");
+const btnDeleteCategory=document.getElementById("btnDeleteCategory");
+
+const newProductCategory=document.getElementById("newProductCategory");
 
 
 btnToggleReceptionSettings?.addEventListener("click",()=>{
@@ -767,61 +775,104 @@ btnToggleReceptionSettings?.addEventListener("click",()=>{
 
 
 
+function normalizeReceptionProducts(list){
+  return list.map(p=>{
+    if(typeof p === "string"){
+      return { nom:p, cat:"Autre" };
+    }
+    return {
+      nom:p.nom,
+      cat:p.cat || "Autre"
+    };
+  });
+}
+
 function loadReceptionProducts(){
   const saved=readLS(LS.products);
-  if(saved.length) return saved;
+  if(saved.length){
+    const norm=normalizeReceptionProducts(saved);
+    writeLS(LS.products,norm);
+    return norm;
+  }
 
-  const def=["Crème liquide","Beurre","Jambon","Fromage","Chocolat","Ovoproduits"];
+
+  const def=[
+    {nom:"Crème liquide",cat:"Pâtisserie"},
+    {nom:"Beurre",cat:"Pâtisserie"},
+    {nom:"Jambon",cat:"Snacking"},
+    {nom:"Fromage",cat:"Snacking"},
+    {nom:"Farine",cat:"Boulangerie"}
+  ];  
+
   writeLS(LS.products,def);
   return def;
 }
 
-function renderReceptionProducts(){
-  if(!recProduct) return;
-
+  function renderReceptionProducts(){
   const list=loadReceptionProducts();
+  const selectedCat=(recCategory?.value||"").trim();
 
-  recProduct.innerHTML="";
-  productDelete.innerHTML="";
+  if(recProduct){
+    recProduct.innerHTML="";
+    const filtered=selectedCat ? list.filter(p=>p.cat===selectedCat) : list;
 
-  list.forEach(name=>{
-    const opt=document.createElement("option");
-    opt.value=name;
-    opt.textContent=name;
+    filtered.forEach(p=>{
+      const opt=document.createElement("option");
+      opt.value=p.nom;
+      opt.textContent=p.nom;
+      recProduct.appendChild(opt);
+    });
+  }
 
-    recProduct.appendChild(opt.cloneNode(true));
-    productDelete.appendChild(opt);
-  });
+  if(productDelete){
+    productDelete.innerHTML="";
+    list.forEach(p=>{
+      const opt=document.createElement("option");
+      opt.value=p.nom;
+      opt.textContent=`${p.nom} (${p.cat})`;
+      productDelete.appendChild(opt);
+    });
+  }
 }
+
 btnDeleteProductReception?.addEventListener("click",()=>{
-  const name=productDelete.value;
+  const name=productDelete?.value||"";
+  if(!name) return;
 
   if(!confirm("Supprimer ce produit ?")) return;
 
   let list=loadReceptionProducts();
-  list=list.filter(n=>n!==name);
+  list=list.filter(p=>p.nom!==name);
 
   writeLS(LS.products,list);
 
   renderReceptionProducts();
 });
 
+recCategory?.addEventListener("change", renderReceptionProducts);
+
 
 btnAddProductReception?.addEventListener("click",()=>{
   const name=(newProductName?.value||"").trim();
+  const cat=(newProductCategory?.value||"").trim();
+
   if(!name) return alert("Écris un nom de produit 🙂");
+  if(!cat) return alert("Choisis une catégorie 🙂");
 
   const list=loadReceptionProducts();
-  if(list.some(n=>n.toLowerCase()===name.toLowerCase())){
+  if(list.some(p=>p.nom.toLowerCase()===name.toLowerCase())){
     return alert("Ce produit existe déjà.");
   }
 
-  list.push(name);
+  list.push({nom:name,cat});
   writeLS(LS.products,list);
 
   if(newProductName) newProductName.value="";
   renderReceptionProducts();
-  recProduct.value=name;
+
+  if(recCategory) recCategory.value=cat;
+  renderReceptionProducts();
+  if(recProduct) recProduct.value=name;
 
   alert("Produit ajouté ✔️");
 });
@@ -890,33 +941,130 @@ if(recDate) recDate.value=todayISO();
 function renderReceptionList(){
   if(!receptionList) return;
 
-  const rows=readLS(LS.reception).slice().reverse();
-  receptionList.innerHTML="";
+  const rows = readLS(LS.reception).slice().reverse();
+  receptionList.innerHTML = "";
 
   if(!rows.length){
-    receptionList.innerHTML=`<div class="small">Aucune réception enregistrée.</div>`;
+    receptionList.innerHTML = `<div class="small">Aucune réception enregistrée.</div>`;
     return;
   }
 
-  rows.slice(0,30).forEach(r=>{
-    const card=document.createElement("div");
-    card.className="card";
+  rows.slice(0, 50).forEach(r => {
+    const card = document.createElement("div");
+    card.className = "reception-history-card";
 
-    card.innerHTML=`
-      <div class="card-title">${r.date} (${r.datetime})</div>
-      <div class="small"><b>Fournisseur :</b> ${r.supplier || "-"}</div>
-      <div class="small"><b>Produit :</b> ${r.product || "-"}</div>
-      <div class="small"><b>Quantité :</b> ${r.quantity || "-"}</div>
-      <div class="small"><b>Lot :</b> ${r.lot || "-"}</div>
-      <div class="small"><b>DLC :</b> ${r.dlc || "-"}</div>
-      <div class="small"><b>Température :</b> ${r.temperature || "-"}${r.temperature ? "°C" : ""}</div>
-      <div class="small"><b>Commentaire :</b> ${r.comment || "-"}</div>
-      <div class="small"><b>Employé :</b> ${r.employee || "-"}</div>
+    const tempValue = r.temperature ? `${r.temperature}°C` : "-";
+    const dlcValue = r.dlc ? formatDateFR(r.dlc) : "-";
+    const dateValue = r.date ? formatDateFR(r.date) : "-";
+
+    card.innerHTML = `
+      <div class="reception-history-top">
+        <div class="reception-history-title">${r.product || "-"}</div>
+        <div class="reception-history-date">${dateValue} · ${r.datetime || "-"}</div>
+      </div>
+
+      <div class="reception-history-grid">
+        <div><span class="rh-label">Fournisseur</span><span class="rh-value">${r.supplier || "-"}</span></div>
+        <div><span class="rh-label">Quantité</span><span class="rh-value">${r.quantity || "-"}</span></div>
+        <div><span class="rh-label">Lot</span><span class="rh-value">${r.lot || "-"}</span></div>
+        <div><span class="rh-label">DLC</span><span class="rh-value">${dlcValue}</span></div>
+        <div><span class="rh-label">Température</span><span class="rh-value">${tempValue}</span></div>
+        <div><span class="rh-label">Employé</span><span class="rh-value">${r.employee || "-"}</span></div>
+        <div><span class="rh-label">Catégorie</span><span class="rh-value">${r.category || "-"}</span></div>
+      </div>
+
+      <div class="reception-history-comment">
+        <span class="rh-label">Commentaire</span>
+        <div class="rh-comment-text">${r.comment || "-"}</div>
+      </div>
     `;
 
     receptionList.appendChild(card);
   });
 }
+
+function loadCategories(){
+  const saved=readLS(LS.categories);
+  if(saved.length) return saved;
+
+  const def=["Boulangerie","Pâtisserie","Snacking"];
+  writeLS(LS.categories,def);
+  return def;
+}
+
+function renderCategories(){
+  const list=loadCategories();
+
+  if(recCategory){
+    recCategory.innerHTML="";
+    list.forEach(name=>{
+      const opt=document.createElement("option");
+      opt.value=name;
+      opt.textContent=name;
+      recCategory.appendChild(opt);
+    });
+  }
+
+  if(categoryDelete){
+    categoryDelete.innerHTML="";
+    list.forEach(name=>{
+      const opt=document.createElement("option");
+      opt.value=name;
+      opt.textContent=name;
+      categoryDelete.appendChild(opt);
+    });
+  }
+
+  if(newProductCategory){
+    newProductCategory.innerHTML="";
+    list.forEach(name=>{
+      const opt=document.createElement("option");
+      opt.value=name;
+      opt.textContent=name;
+      newProductCategory.appendChild(opt);
+    });
+  }
+}
+
+btnAddCategory?.addEventListener("click",()=>{
+  const name=(newCategoryName?.value||"").trim();
+  if(!name) return alert("Écris un nom de catégorie 🙂");
+
+  const list=loadCategories();
+  if(list.some(n=>n.toLowerCase()===name.toLowerCase())){
+    return alert("Cette catégorie existe déjà.");
+  }
+
+  list.push(name);
+  writeLS(LS.categories,list);
+
+  if(newCategoryName) newCategoryName.value="";
+  renderCategories();
+  renderReceptionProducts();
+
+  if(recCategory) recCategory.value=name;
+  if(newProductCategory) newProductCategory.value=name;
+
+  alert("Catégorie ajoutée ✔️");
+});
+
+btnDeleteCategory?.addEventListener("click",()=>{
+  const name=categoryDelete?.value||"";
+  if(!name) return;
+
+  if(!confirm(`Supprimer la catégorie "${name}" ?\n\nLes produits liés seront également supprimés.`)) return;
+
+  const cats=loadCategories().filter(c=>c!==name);
+  writeLS(LS.categories,cats);
+
+  const products=loadReceptionProducts().filter(p=>p.cat!==name);
+  writeLS(LS.products,products);
+
+  renderCategories();
+  renderReceptionProducts();
+
+  alert("Catégorie supprimée ✔️");
+});
 
 document.getElementById("btnSaveReception")?.addEventListener("click",()=>{
   const emp=requireEmployee();
@@ -924,6 +1072,7 @@ document.getElementById("btnSaveReception")?.addEventListener("click",()=>{
 
   const supplier=(recSupplier?.value||"").trim();
   const product=(recProduct?.value||"").trim();
+  const category=(recCategory?.value||"").trim();
 
   if(!supplier || !product){
     return alert("Fournisseur et produit sont obligatoires 🙂");
@@ -934,6 +1083,7 @@ document.getElementById("btnSaveReception")?.addEventListener("click",()=>{
     datetime:nowLocale(),
     supplier,
     product,
+    category,
     quantity:(recQty?.value||"").trim(),
     lot:(recLot?.value||"").trim(),
     dlc:recDlc?.value||"",
@@ -1129,9 +1279,11 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnTestNotif")?.addEventListener("click", testNotification);
 
   updateNotifStatusUI();
-  renderReceptionList();
+  renderCategories();
   renderSuppliers();
   renderReceptionProducts();
+  renderReceptionList();
+  
   openTab("today");
 });
 console.log("APP JS chargé");
