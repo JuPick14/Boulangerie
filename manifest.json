@@ -1,6 +1,7 @@
 {
   "name": "Boulangerie Pâtisserie Cointe",
   "short_name": "Boulangerie",
+  "id": "/Boulangerie/",
   "start_url": "/Boulangerie/",
   "scope": "/Boulangerie/",
   "display": "standalone",
