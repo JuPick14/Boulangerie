@@ -891,6 +891,291 @@ document.getElementById("btnGenerateInspection").addEventListener("click",()=>{
   });
 });
 
+document.getElementById("btnGenerateMonthlyJournal")?.addEventListener("click", () => {
+  const month = document.getElementById("inspMonth")?.value || monthISO();
+  exportMonthlyHACCPJournalPDF(month);
+});
+
+function getMonthlyHACCPData(monthStr){
+  const temps = readLS(LS.temps).filter(r => (r.date || "").startsWith(monthStr));
+  const hygiene = readLS(LS.hygiene).filter(r => (r.date || "").startsWith(monthStr));
+  const reception = readLS(LS.reception).filter(r => (r.date || "").startsWith(monthStr));
+  const notes = readLS(LS.notes).filter(r => (r.date || "").startsWith(monthStr));
+
+  let tempOk = 0;
+  let tempWarn = 0;
+  let tempBad = 0;
+
+  temps.forEach(r => {
+    if(r.degivrage === "oui" || r.eteint === "oui") return;
+
+    const z = zones.find(x => x.nom === r.zone);
+    const st = tempStatus(z || {type:"positif",min:0,max:5}, Number(r.temperature));
+
+    if(st === "ok") tempOk++;
+    else if(st === "warn") tempWarn++;
+    else if(st === "bad") tempBad++;
+  });
+
+  let hygieneTotal = 0;
+  let hygieneDone = 0;
+
+  hygiene.forEach(r => {
+    (r.items || []).forEach(it => {
+      hygieneTotal++;
+      if(it.fait === "oui") hygieneDone++;
+    });
+  });
+
+  return {
+    establishment: bakeryName.value || "Boulangerie Pâtisserie Cointe",
+    month: monthStr,
+    temps,
+    hygiene,
+    reception,
+    notes,
+    summary: {
+      tempCount: temps.length,
+      tempOk,
+      tempWarn,
+      tempBad,
+      hygieneCount: hygiene.length,
+      hygieneTotal,
+      hygieneDone,
+      receptionCount: reception.length,
+      notesCount: notes.length
+    }
+  };
+}
+
+function exportMonthlyHACCPJournalPDF(monthStr){
+  const data = getMonthlyHACCPData(monthStr || monthISO());
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  function drawContent(startX = 15){
+    let y = 18;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.text(data.establishment, startX, y);
+
+    y += 8;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(13);
+    doc.text(`Journal HACCP mensuel - ${formatMonthFR(data.month)}`, startX, y);
+
+    y += 10;
+    doc.setFontSize(11);
+    doc.text(`Généré le : ${nowLocale()}`, startX, y);
+
+    y += 10;
+
+    function ensureSpace(lines = 1){
+      if(y + lines * 6 > 280){
+        doc.addPage();
+        y = 20;
+      }
+    }
+
+    function section(title){
+      ensureSpace(4);
+      y += 2;
+      doc.setDrawColor(190, 190, 190);
+      doc.line(15, y, 195, y);
+      y += 8;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text(title, 15, y);
+
+      y += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+    }
+
+    function writeLabelValue(label, value){
+      ensureSpace(2);
+
+      doc.setFont("helvetica", "bold");
+      const labelWidth = doc.getTextWidth(label) + 4;
+      doc.text(label, 17, y);
+
+      doc.setFont("helvetica", "normal");
+      const xValue = 17 + labelWidth;
+      const lines = doc.splitTextToSize(String(value || "-"), 180 - labelWidth);
+      doc.text(lines, xValue, y);
+
+      y += Math.max(lines.length * 6, 7);
+    }
+
+    // 1) Infos générales
+    section("1) Informations générales");
+    writeLabelValue("Établissement :", data.establishment);
+    writeLabelValue("Mois :", formatMonthFR(data.month));
+    writeLabelValue("Date de génération :", nowLocale());
+
+    // 2) Synthèse
+    section("2) Synthèse mensuelle");
+    writeLabelValue("Relevés températures :", data.summary.tempCount);
+    writeLabelValue("Températures OK :", data.summary.tempOk);
+    writeLabelValue("Températures limite :", data.summary.tempWarn);
+    writeLabelValue("Températures alerte :", data.summary.tempBad);
+    writeLabelValue("Relevés hygiène :", data.summary.hygieneCount);
+    writeLabelValue(
+      "Tâches hygiène faites :",
+      `${data.summary.hygieneDone}/${data.summary.hygieneTotal}`
+    );
+    writeLabelValue("Réceptions :", data.summary.receptionCount);
+    writeLabelValue("Notes :", data.summary.notesCount);
+
+    // 3) Températures
+    section("3) Températures");
+    if(!data.temps.length){
+      doc.text("Aucun relevé température sur la période.", 17, y);
+      y += 8;
+    }else{
+      data.temps.forEach(r => {
+        ensureSpace(4);
+
+        const line1 = `${formatDateFR(r.date)}  •  ${r.periode || "-"}  •  ${r.zone || "-"}`;
+        const line2 = `Valeur : ${getTemperatureDisplayValue(r)}  •  Employé : ${r.employee || "-"}`;
+
+        doc.setFont("helvetica", "bold");
+        doc.text(doc.splitTextToSize(line1, 170), 17, y);
+        y += 6;
+
+        doc.setFont("helvetica", "normal");
+        doc.text(doc.splitTextToSize(line2, 170), 17, y);
+        y += 7;
+      });
+    }
+
+    // 4) Hygiène
+    section("4) Hygiène");
+    if(!data.hygiene.length){
+      doc.text("Aucun relevé hygiène sur la période.", 17, y);
+      y += 8;
+    }else{
+      data.hygiene.forEach(r => {
+        ensureSpace(4);
+
+        const totalItems = (r.items || []).length;
+        const doneItems = (r.items || []).filter(it => it.fait === "oui").length;
+        const pct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
+
+        const line1 = `${formatDateFR(r.date)}  •  ${r.periode || "-"}  •  Employé : ${r.employee || "-"}`;
+        const line2 = `Tâches faites : ${doneItems}/${totalItems} (${pct}%)`;
+
+        doc.setFont("helvetica", "bold");
+        doc.text(doc.splitTextToSize(line1, 170), 17, y);
+        y += 6;
+
+        doc.setFont("helvetica", "normal");
+        doc.text(doc.splitTextToSize(line2, 170), 17, y);
+        y += 7;
+      });
+    }
+
+    // 5) Réceptions
+    section("5) Réceptions");
+    if(!data.reception.length){
+      doc.text("Aucune réception sur la période.", 17, y);
+      y += 8;
+    }else{
+      data.reception.forEach(r => {
+        ensureSpace(5);
+
+        const line1 = `${formatDateFR(r.date)}  •  ${r.product || "-"}  •  ${r.supplier || "-"}`;
+        const line2 = `Catégorie : ${r.category || "-"}  •  Qté : ${r.quantity || "-"}  •  Lot : ${r.lot || "-"}`;
+        const line3 = `DLC : ${r.dlc ? formatDateFR(r.dlc) : "-"}  •  Température : ${r.temperature ? `${r.temperature}°C` : "-"}  •  Employé : ${r.employee || "-"}`;
+
+        doc.setFont("helvetica", "bold");
+        doc.text(doc.splitTextToSize(line1, 170), 17, y);
+        y += 6;
+
+        doc.setFont("helvetica", "normal");
+        doc.text(doc.splitTextToSize(line2, 170), 17, y);
+        y += 6;
+        doc.text(doc.splitTextToSize(line3, 170), 17, y);
+        y += 7;
+      });
+    }
+
+    // 6) Notes
+    section("6) Notes / Observations");
+    if(!data.notes.length){
+      doc.text("Aucune note sur la période.", 17, y);
+      y += 8;
+    }else{
+      data.notes.forEach(r => {
+        ensureSpace(5);
+
+        doc.setFont("helvetica", "bold");
+        doc.text(`${formatDateFR(r.date)} - ${r.datetime || "-"}`, 17, y);
+        y += 6;
+
+        doc.setFont("helvetica", "normal");
+        const lines = doc.splitTextToSize(r.texte || "-", 165);
+        doc.text(lines, 17, y);
+        y += lines.length * 6 + 3;
+      });
+    }
+
+    const pageCount = doc.getNumberOfPages();
+    for(let i = 1; i <= pageCount; i++){
+      doc.setPage(i);
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text(
+        `Journal HACCP mensuel • ${formatMonthFR(data.month)} • Page ${i}/${pageCount}`,
+        15,
+        290
+      );
+    }
+  }
+
+  if(typeof loadLogoBase64 === "function"){
+    let done = false;
+
+    try{
+      loadLogoBase64(function(logoData){
+        done = true;
+
+        if(logoData){
+          try{
+            doc.addImage(logoData, "PNG", 15, 12, 18, 18);
+            drawContent(38);
+          }catch{
+            drawContent(15);
+          }
+        }else{
+          drawContent(15);
+        }
+
+        const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
+        doc.save(`journal_HACCP_${safeName}_${data.month}.pdf`);
+      });
+
+      setTimeout(() => {
+        if(!done){
+          drawContent(15);
+          const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
+          doc.save(`journal_HACCP_${safeName}_${data.month}.pdf`);
+        }
+      }, 800);
+    }catch{
+      drawContent(15);
+      const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
+      doc.save(`journal_HACCP_${safeName}_${data.month}.pdf`);
+    }
+  }else{
+    drawContent(15);
+    const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
+    doc.save(`journal_HACCP_${safeName}_${data.month}.pdf`);
+  }
+}
+
 /******** Réception marchandises ********/
 const recDate=document.getElementById("recDate");
 const recSupplier=document.getElementById("recSupplier");
@@ -1527,6 +1812,19 @@ function getInspectionModeData(){
     }
   }
 
+  return {
+    establishment: bakeryName.value || "Boulangerie Pâtisserie Cointe",
+    date: todayISO(),
+    employee: employeeSelect?.value || "—",
+    globalClass,
+    globalText,
+    tempsList,
+    lastHyg,
+    recRows,
+    noteRows
+  };
+}
+
 function renderInspectionMode(){
   const est = document.getElementById("inspEstablishment");
   const dateEl = document.getElementById("inspDate");
@@ -1661,134 +1959,226 @@ function renderInspectionMode(){
   }
 }
 
+
 function exportInspectionModePDF(){
   const data = getInspectionModeData();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
 
-  loadLogoBase64(function(logoData){
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+  function drawContent(startX = 15, withLogo = false){
+    let y = 18;
 
-    if(logoData){
-      doc.addImage(logoData, "PNG", 10, 8, 22, 22);
+    if(withLogo){
+      y = 20;
     }
 
-    doc.setFontSize(18);
-    doc.text(data.establishment, 36, 16);
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.text(data.establishment || "Boulangerie Pâtisserie Cointe", startX, y);
 
+    y += 8;
+    doc.setFont("helvetica", "normal");
     doc.setFontSize(13);
-    doc.text("Mode inspection HACCP", 36, 24);
+    doc.text("Rapport inspection HACCP", startX, y);
 
-    doc.setFontSize(10);
-    doc.text(`Date : ${formatDateFR(data.date)}`, 36, 30);
-    doc.text(`Employé : ${data.employee}`, 36, 35);
-    doc.text(`Statut global : ${data.globalText}`, 36, 40);
+    y += 10;
+    doc.setFontSize(11);
+    doc.text(`Date : ${formatDateFR(data.date)}`, startX, y);
+    y += 6;
+    doc.text(`Employé : ${data.employee || "-"}`, startX, y);
+    y += 6;
+    doc.text(`Statut global : ${data.globalText || "-"}`, startX, y);
 
-    let y = 52;
+    y += 10;
 
     function ensureSpace(lines = 1){
-      if(y + lines * 6 > 282){
+      if(y + lines * 6 > 280){
         doc.addPage();
         y = 20;
       }
     }
 
     function section(title){
-      ensureSpace(3);
-      doc.setFontSize(13);
-      doc.setFont(undefined, "bold");
-      doc.text(title, 10, y);
-      y += 4;
-      doc.setDrawColor(180,180,180);
-      doc.line(10, y, 200, y);
-      y += 7;
-      doc.setFont(undefined, "normal");
-      doc.setFontSize(10);
+      ensureSpace(4);
+      y += 2;
+      doc.setDrawColor(190, 190, 190);
+      doc.line(15, y, 195, y);
+      y += 8;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text(title, 15, y);
+
+      y += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
     }
 
     function writeLabelValue(label, value){
-      ensureSpace(2);
-      doc.setFont(undefined, "bold");
-      doc.text(`${label} :`, 12, y);
-      doc.setFont(undefined, "normal");
-      const lines = splitToLines(doc, value || "-", 150);
-      doc.text(lines, 45, y);
-      y += Math.max(lines.length * 5, 6);
-    }
+  ensureSpace(2);
 
+  doc.setFont("helvetica", "bold");
+
+  // largeur du label
+  const labelWidth = doc.getTextWidth(label) + 4;
+
+  // affichage label
+  doc.text(label + " ", 17, y);
+
+  // valeur commence juste après le label
+  doc.setFont("helvetica", "normal");
+
+  const xValue = 17 + labelWidth;
+
+  const lines = doc.splitTextToSize(String(value || "-"), 180 - labelWidth);
+
+  doc.text(lines, xValue, y);
+
+  y += Math.max(lines.length * 6, 7);
+}
+
+    // 1) Infos
     section("1) Informations générales");
-    writeLabelValue("Établissement", data.establishment);
-    writeLabelValue("Date", formatDateFR(data.date));
-    writeLabelValue("Employé sélectionné", data.employee);
-    writeLabelValue("Statut global", data.globalText);
+    writeLabelValue("Établissement :", data.establishment);
+    writeLabelValue("Date :", formatDateFR(data.date));
+    writeLabelValue("Employé sélectionné :", data.employee);
+    writeLabelValue("Statut global :", data.globalText);
 
+    // 2) Températures
     section("2) Températures du jour");
-    if(!data.tempsList.length){
-      doc.text("Aucun relevé température enregistré aujourd’hui.", 12, y);
-      y += 6;
+    if(!data.tempsList || !data.tempsList.length){
+      doc.text("Aucun relevé température enregistré aujourd’hui.", 17, y);
+      y += 8;
     }else{
       data.tempsList.forEach(r => {
         ensureSpace(3);
-        const valeur = getTemperatureDisplayValue(r);
-        const line = `${r.zone || "-"} | ${r.periode || "-"} | ${valeur} | ${r.datetime || "-"} | ${r.employee || "-"}`;
-        const lines = splitToLines(doc, line, 185);
-        doc.text(lines, 12, y);
-        y += lines.length * 5 + 2;
+
+        const line1 = `${r.zone || "-"}  •  ${r.periode || "-"}  •  ${getTemperatureDisplayValue(r)}`;
+        const line2 = `Heure : ${r.datetime || "-"}  •  Employé : ${r.employee || "-"}`;
+
+        doc.setFont("helvetica", "bold");
+        doc.text(doc.splitTextToSize(line1, 170), 17, y);
+        y += 6;
+
+        doc.setFont("helvetica", "normal");
+        doc.text(doc.splitTextToSize(line2, 170), 17, y);
+        y += 7;
       });
     }
 
+    // 3) Hygiène
     section("3) Hygiène du jour");
     if(!data.lastHyg){
-      doc.text("Aucun relevé hygiène enregistré aujourd’hui.", 12, y);
-      y += 6;
+      doc.text("Aucun relevé hygiène enregistré aujourd’hui.", 17, y);
+      y += 8;
     }else{
       const totalItems = (data.lastHyg.items || []).length;
       const doneItems = (data.lastHyg.items || []).filter(it => it.fait === "oui").length;
       const pct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
 
-      writeLabelValue("Période", data.lastHyg.periode || "-");
-      writeLabelValue("Heure", data.lastHyg.datetime || "-");
-      writeLabelValue("Employé", data.lastHyg.employee || "-");
-      writeLabelValue("Tâches faites", `${doneItems}/${totalItems} (${pct}%)`);
+      writeLabelValue("Période :", data.lastHyg.periode || "-");
+      writeLabelValue("Heure :", data.lastHyg.datetime || "-");
+      writeLabelValue("Employé :", data.lastHyg.employee || "-");
+      writeLabelValue("Tâches faites :", `${doneItems}/${totalItems} (${pct}%)`);
     }
 
+    // 4) Réceptions
     section("4) Dernières réceptions");
-    if(!data.recRows.length){
-      doc.text("Aucune réception enregistrée.", 12, y);
-      y += 6;
+    if(!data.recRows || !data.recRows.length){
+      doc.text("Aucune réception enregistrée.", 17, y);
+      y += 8;
     }else{
       data.recRows.forEach(r => {
         ensureSpace(4);
-        const line1 = `${r.product || "-"} | ${r.supplier || "-"} | ${r.category || "-"}`;
-        const line2 = `Date : ${r.date ? formatDateFR(r.date) : "-"} | Qté : ${r.quantity || "-"} | Lot : ${r.lot || "-"} | DLC : ${r.dlc ? formatDateFR(r.dlc) : "-"}`;
-        const lines1 = splitToLines(doc, line1, 185);
-        const lines2 = splitToLines(doc, line2, 185);
-        doc.text(lines1, 12, y);
-        y += lines1.length * 5;
-        doc.text(lines2, 12, y);
-        y += lines2.length * 5 + 2;
+
+        const line1 = `${r.product || "-"}  •  ${r.supplier || "-"}  •  ${r.category || "-"}`;
+        const line2 = `Date : ${r.date ? formatDateFR(r.date) : "-"}  •  Qté : ${r.quantity || "-"}  •  Lot : ${r.lot || "-"}  •  DLC : ${r.dlc ? formatDateFR(r.dlc) : "-"}`;
+
+        doc.setFont("helvetica", "bold");
+        doc.text(doc.splitTextToSize(line1, 170), 17, y);
+        y += 6;
+
+        doc.setFont("helvetica", "normal");
+        doc.text(doc.splitTextToSize(line2, 170), 17, y);
+        y += 7;
       });
     }
 
+    // 5) Notes
     section("5) Notes du jour");
-    if(!data.noteRows.length){
-      doc.text("Aucune note enregistrée aujourd’hui.", 12, y);
-      y += 6;
+    if(!data.noteRows || !data.noteRows.length){
+      doc.text("Aucune note enregistrée aujourd’hui.", 17, y);
+      y += 8;
     }else{
       data.noteRows.forEach(r => {
-        ensureSpace(4);
-        doc.setFont(undefined, "bold");
-        doc.text(`${r.daily === true ? "Note du jour" : "Observation"} - ${r.datetime || "-"}`, 12, y);
-        doc.setFont(undefined, "normal");
-        y += 5;
-        const lines = splitToLines(doc, r.texte || "-", 180);
-        doc.text(lines, 14, y);
-        y += lines.length * 5 + 3;
+        ensureSpace(5);
+
+        doc.setFont("helvetica", "bold");
+        doc.text(`${r.daily === true ? "Note du jour" : "Observation"} - ${r.datetime || "-"}`, 17, y);
+        y += 6;
+
+        doc.setFont("helvetica", "normal");
+        const lines = doc.splitTextToSize(r.texte || "-", 165);
+        doc.text(lines, 17, y);
+        y += lines.length * 6 + 3;
       });
     }
 
+    // Footer
+    const pageCount = doc.getNumberOfPages();
+    for(let i = 1; i <= pageCount; i++){
+      doc.setPage(i);
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text(
+        `Document généré automatiquement le ${nowLocale()}  •  Page ${i}/${pageCount}`,
+        15,
+        290
+      );
+    }
+  }
+
+  // Logo plus petit et mieux placé
+  if(typeof loadLogoBase64 === "function"){
+    let done = false;
+
+    try{
+      loadLogoBase64(function(logoData){
+        done = true;
+
+        if(logoData){
+          try{
+            doc.addImage(logoData, "PNG", 15, 12, 18, 18);
+            drawContent(38, true);
+          }catch{
+            drawContent(15, false);
+          }
+        }else{
+          drawContent(15, false);
+        }
+
+        const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
+        doc.save(`inspection_${safeName}_${data.date}.pdf`);
+      });
+
+      setTimeout(() => {
+        if(!done){
+          drawContent(15, false);
+          const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
+          doc.save(`inspection_${safeName}_${data.date}.pdf`);
+        }
+      }, 800);
+    }catch{
+      drawContent(15, false);
+      const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
+      doc.save(`inspection_${safeName}_${data.date}.pdf`);
+    }
+  }else{
+    drawContent(15, false);
     const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
     doc.save(`inspection_${safeName}_${data.date}.pdf`);
-  });
+  }
 }
 
 
@@ -1820,23 +2210,18 @@ window.addEventListener("load", () => {
   console.log("btnInspectionRefresh =", btnRefresh);
 
   btnPdf?.addEventListener("click", () => {
-    alert("clic PDF OK");
-    renderInspectionMode();
-    exportInspectionModePDF();
+   renderInspectionMode();
+   exportInspectionModePDF();
   });
 
   btnPrint?.addEventListener("click", () => {
-    alert("clic PRINT OK");
-    renderInspectionMode();
-    window.print();
+   renderInspectionMode();
+   window.print();
   });
 
   btnRefresh?.addEventListener("click", () => {
-    alert("clic REFRESH OK");
-    renderInspectionMode();
+   renderInspectionMode();
   });
 });
 
-console.log("APP JS chargé");
-}
-
+console.log("APP JS chargé")
