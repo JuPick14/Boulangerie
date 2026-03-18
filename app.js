@@ -1484,8 +1484,195 @@ function getTodayTemperatureRows(){
   return readLS(LS.temps).filter(r => r.date === todayISO());
 }
 
+function getInspectionModeData(){
+  const morning = tempsDoneFor("matin");
+  const afternoon = tempsDoneFor("apres-midi");
+  const hygDone = !!getLastHygieneToday();
+
+  const tempsRows = readLS(LS.temps).filter(r => r.date === todayISO());
+  const latestByZone = {};
+
+  tempsRows.forEach(r => {
+    const key = `${r.periode}__${r.zone}`;
+    latestByZone[key] = r;
+  });
+
+  const tempsList = Object.values(latestByZone);
+
+  const hygRows = readLS(LS.hygiene).filter(r => r.date === todayISO());
+  const lastHyg = hygRows.length ? hygRows[hygRows.length - 1] : null;
+
+  const recRows = readLS(LS.reception).slice().reverse().slice(0, 5);
+  const noteRows = readLS(LS.notes).filter(r => r.date === todayISO()).slice().reverse();
+
+  let globalClass = "warn";
+  let globalText = "À vérifier";
+
+  if(morning && afternoon && hygDone){
+    globalClass = "ok";
+    globalText = "Conforme ✔";
+  }else{
+    const missing = [];
+    if(!morning) missing.push("Temp matin");
+    if(!afternoon) missing.push("Temp après-midi");
+    if(!hygDone) missing.push("Hygiène");
+
+    if(missing.length === 3){
+      globalClass = "bad";
+      globalText = "Aucun relevé";
+    }else{
+      globalClass = "warn";
+      globalText = "Manquant : " + missing.join(", ");
+    }
+  }
+
+function exportInspectionModePDF(){
+  const data = getInspectionModeData();
+
+  loadLogoBase64(function(logoData){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    if(logoData){
+      doc.addImage(logoData, "PNG", 10, 8, 22, 22);
+    }
+
+    doc.setFontSize(18);
+    doc.text(data.establishment, 36, 16);
+
+    doc.setFontSize(13);
+    doc.text("Mode inspection HACCP", 36, 24);
+
+    doc.setFontSize(10);
+    doc.text(`Date : ${formatDateFR(data.date)}`, 36, 30);
+    doc.text(`Employé : ${data.employee}`, 36, 35);
+    doc.text(`Statut global : ${data.globalText}`, 36, 40);
+
+    let y = 52;
+
+    function ensureSpace(lines = 1){
+      if(y + lines * 6 > 282){
+        doc.addPage();
+        y = 20;
+      }
+    }
+
+    function section(title){
+      ensureSpace(3);
+      doc.setFontSize(13);
+      doc.setFont(undefined, "bold");
+      doc.text(title, 10, y);
+      y += 4;
+      doc.setDrawColor(180,180,180);
+      doc.line(10, y, 200, y);
+      y += 7;
+      doc.setFont(undefined, "normal");
+      doc.setFontSize(10);
+    }
+
+    function writeLabelValue(label, value){
+      ensureSpace(2);
+      doc.setFont(undefined, "bold");
+      doc.text(`${label} :`, 12, y);
+      doc.setFont(undefined, "normal");
+      const lines = splitToLines(doc, value || "-", 150);
+      doc.text(lines, 45, y);
+      y += Math.max(lines.length * 5, 6);
+    }
+
+    section("1) Informations générales");
+    writeLabelValue("Établissement", data.establishment);
+    writeLabelValue("Date", formatDateFR(data.date));
+    writeLabelValue("Employé sélectionné", data.employee);
+    writeLabelValue("Statut global", data.globalText);
+
+    section("2) Températures du jour");
+    if(!data.tempsList.length){
+      doc.text("Aucun relevé température enregistré aujourd’hui.", 12, y);
+      y += 6;
+    }else{
+      data.tempsList.forEach(r => {
+        ensureSpace(3);
+        const valeur = getTemperatureDisplayValue(r);
+        const line = `${r.zone || "-"} | ${r.periode || "-"} | ${valeur} | ${r.datetime || "-"} | ${r.employee || "-"}`;
+        const lines = splitToLines(doc, line, 185);
+        doc.text(lines, 12, y);
+        y += lines.length * 5 + 2;
+      });
+    }
+
+    section("3) Hygiène du jour");
+    if(!data.lastHyg){
+      doc.text("Aucun relevé hygiène enregistré aujourd’hui.", 12, y);
+      y += 6;
+    }else{
+      const totalItems = (data.lastHyg.items || []).length;
+      const doneItems = (data.lastHyg.items || []).filter(it => it.fait === "oui").length;
+      const pct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
+
+      writeLabelValue("Période", data.lastHyg.periode || "-");
+      writeLabelValue("Heure", data.lastHyg.datetime || "-");
+      writeLabelValue("Employé", data.lastHyg.employee || "-");
+      writeLabelValue("Tâches faites", `${doneItems}/${totalItems} (${pct}%)`);
+    }
+
+    section("4) Dernières réceptions");
+    if(!data.recRows.length){
+      doc.text("Aucune réception enregistrée.", 12, y);
+      y += 6;
+    }else{
+      data.recRows.forEach(r => {
+        ensureSpace(4);
+        const line1 = `${r.product || "-"} | ${r.supplier || "-"} | ${r.category || "-"}`;
+        const line2 = `Date : ${r.date ? formatDateFR(r.date) : "-"} | Qté : ${r.quantity || "-"} | Lot : ${r.lot || "-"} | DLC : ${r.dlc ? formatDateFR(r.dlc) : "-"}`;
+        const lines1 = splitToLines(doc, line1, 185);
+        const lines2 = splitToLines(doc, line2, 185);
+        doc.text(lines1, 12, y);
+        y += lines1.length * 5;
+        doc.text(lines2, 12, y);
+        y += lines2.length * 5 + 2;
+      });
+    }
+
+    section("5) Notes du jour");
+    if(!data.noteRows.length){
+      doc.text("Aucune note enregistrée aujourd’hui.", 12, y);
+      y += 6;
+    }else{
+      data.noteRows.forEach(r => {
+        ensureSpace(4);
+        doc.setFont(undefined, "bold");
+        doc.text(`${r.daily === true ? "Note du jour" : "Observation"} - ${r.datetime || "-"}`, 12, y);
+        doc.setFont(undefined, "normal");
+        y += 5;
+        const lines = splitToLines(doc, r.texte || "-", 180);
+        doc.text(lines, 14, y);
+        y += lines.length * 5 + 3;
+      });
+    }
+
+    const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
+    doc.save(`inspection_${safeName}_${data.date}.pdf`);
+  });
+}
+
+  return {
+    establishment: bakeryName.value || "Boulangerie Pâtisserie Cointe",
+    date: todayISO(),
+    employee: employeeSelect?.value || "—",
+    globalClass,
+    globalText,
+    tempsList,
+    lastHyg,
+    recRows,
+    noteRows
+  };
+}
+
 function getInspectionTemperatureStatusClass(r){
-  if(r.degivrage === "oui" || r.eteint === "oui") return "warn";
+  if(r.eteint === "oui") return "warn";
+if(r.degivrage === "oui") return "warn";
+if(st === "bad") return "bad";
 
   const z = zones.find(x => x.nom === r.zone);
   const st = tempStatus(z || {type:"positif",min:0,max:5}, Number(r.temperature));
@@ -1526,7 +1713,20 @@ function renderInspectionMode(){
   if(!tempsList.length){
     tempsBox.innerHTML = `<div class="inspection-empty">Aucun relevé température enregistré aujourd’hui.</div>`;
   }else{
-    tempsBox.innerHTML = `<div class="inspection-list">
+
+  const tempsSummary = `
+    <div class="inspection-hygiene-stats">
+      <div class="inspection-mini-stat">
+        <div class="inspection-mini-stat-title">Relevés</div>
+        <div class="inspection-mini-stat-value">${tempsList.length}</div>
+      </div>
+    </div>
+  `;
+
+  tempsBox.innerHTML = `
+    ${tempsSummary}
+
+    <div class="inspection-list">
       ${tempsList.map(r => `
         <div class="inspection-item">
           <div class="inspection-item-top">
@@ -1534,13 +1734,16 @@ function renderInspectionMode(){
               <div class="inspection-item-title">${r.zone || "-"}</div>
               <div class="inspection-item-sub">${r.periode || "-"} · ${r.datetime || "-"}</div>
             </div>
-            <div class="inspection-item-value ${getInspectionTemperatureStatusClass(r)}">${getTemperatureDisplayValue(r)}</div>
+            <div class="inspection-item-value ${getInspectionTemperatureStatusClass(r)}">
+              ${getTemperatureDisplayValue(r)}
+            </div>
           </div>
           <div class="inspection-item-sub">Employé : ${r.employee || "-"}</div>
         </div>
       `).join("")}
-    </div>`;
-  }
+    </div>
+  `;
+}
 
   /* Hygiène du jour */
   const hygRows = readLS(LS.hygiene).filter(r => r.date === todayISO());
@@ -1633,15 +1836,26 @@ function renderInspectionMode(){
   const hygDone = !!getLastHygieneToday();
 
   let globalClass = "warn";
-  let globalText = "À vérifier";
+let globalText = "À vérifier";
 
-  if(morning && afternoon && hygDone){
-    globalClass = "ok";
-    globalText = "Conforme";
-  }else if(!morning && !afternoon && !hygDone){
+if(morning && afternoon && hygDone){
+  globalClass = "ok";
+  globalText = "Conforme ✔";
+}else{
+  const missing = [];
+
+  if(!morning) missing.push("Temp matin");
+  if(!afternoon) missing.push("Temp après-midi");
+  if(!hygDone) missing.push("Hygiène");
+
+  if(missing.length === 3){
     globalClass = "bad";
-    globalText = "Incomplet";
+    globalText = "Aucun relevé";
+  }else{
+    globalClass = "warn";
+    globalText = "Manquant : " + missing.join(", ");
   }
+}
 
   if(globalEl){
     globalEl.className = `inspection-status-pill ${globalClass}`;
@@ -1655,6 +1869,11 @@ document.getElementById("btnInspectionRefresh")?.addEventListener("click", () =>
 document.getElementById("btnInspectionPrint")?.addEventListener("click", () => {
   renderInspectionMode();
   window.print();
+});
+
+document.getElementById("btnInspectionPDF")?.addEventListener("click", () => {
+  renderInspectionMode();
+  exportInspectionModePDF();
 });
 
 console.log("APP JS chargé");
