@@ -640,46 +640,125 @@ document.getElementById("btnExportHygienePDF").addEventListener("click",()=>{
 
 /******** Notes ********/
 
+const notesDate = document.getElementById("notesDate");
+const notesTexte = document.getElementById("notesTexte");
+
+if(notesDate) notesDate.value = todayISO();
+
 function renderNotesList(){
   const box = document.getElementById("notesListe");
   if(!box) return;
 
-  const rows = readLS(LS.notes).slice().reverse();
+  const rows = readLS(LS.notes)
+    .filter(r => !r.daily)
+    .slice()
+    .reverse();
+
+
   box.innerHTML = "";
 
   if(!rows.length){
-    box.innerHTML = `
-      <div class="note-history-card">
-        <div class="small">Aucune note enregistrée.</div>
-      </div>
-    `;
+
+    box.innerHTML = `<div class="small">Aucune note enregistrée.</div>`;
     return;
   }
 
-  rows.slice(0, 50).forEach(r => {
+
+  rows.forEach(r => {
     const card = document.createElement("div");
     card.className = "note-history-card";
 
-    const dateValue = r.date ? formatDateFR(r.date) : "-";
-    const datetimeValue = r.datetime || "-";
-    const textValue = (r.texte || "").trim() || "—";
-    const isDaily = r.daily === true;
-
     card.innerHTML = `
       <div class="note-history-top">
-        <div>
-          <div class="note-history-date">${dateValue}</div>
-          ${isDaily ? `<div class="note-history-badge">📌 Note du jour</div>` : ``}
-        </div>
-        <div class="note-history-datetime">${datetimeValue}</div>
+        <div class="note-history-date">${formatDateFR(r.date)}</div>
+        <div class="note-history-datetime">${r.datetime || "-"}</div>
       </div>
 
-      <div class="note-history-text">${textValue}</div>
-    `;
+      <div class="note-history-text">${(r.texte || "").trim() || "-"}</div>
 
+      `;
     box.appendChild(card);
   });
 }
+
+document.getElementById("btnSaveNotes")?.addEventListener("click", () => {
+  const texte = (notesTexte?.value || "").trim();
+  const date = notesDate?.value || todayISO();
+
+  if(!texte) return alert("Écris une note avant d’enregistrer 🙂");
+
+  const rows = readLS(LS.notes);
+  rows.push({
+    date,
+    datetime: nowLocale(),
+    texte,
+    daily: false
+  });
+
+  writeLS(LS.notes, rows);
+
+  if(notesTexte) notesTexte.value = "";
+  if(notesDate) notesDate.value = todayISO();
+
+  renderNotesList();
+  alert("Note enregistrée ✔️");
+});
+
+document.getElementById("btnExportNotesCSV")?.addEventListener("click", () => {
+  const rows = readLS(LS.notes).filter(r => !r.daily);
+  if(!rows.length) return alert("Aucune note à exporter !");
+
+  const csv = toCSV(rows, [
+    {key:"date", label:"Date"},
+    {key:"datetime", label:"Date/Heure"},
+    {key:"texte", label:"Texte"}
+  ]);
+
+  downloadBlob(
+    new Blob([csv], {type:"text/csv;charset=utf-8"}),
+    "notes.csv"
+  );
+});
+
+document.getElementById("btnExportNotesPDF")?.addEventListener("click", () => {
+  const rows = readLS(LS.notes).filter(r => !r.daily);
+  if(!rows.length) return alert("Aucune note à exporter !");
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.text(`${bakeryName.value || "Boulangerie"} - Notes / Observations`, 15, 18);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.text(`Généré le ${nowLocale()}`, 15, 26);
+
+  let y = 40;
+
+  function ensureSpace(lines = 1){
+    if(y + lines * 6 > 280){
+      doc.addPage();
+      y = 20;
+    }
+  }
+
+  rows.slice().reverse().forEach(r => {
+    ensureSpace(4);
+
+    doc.setFont("helvetica", "bold");
+    doc.text(`${formatDateFR(r.date)} - ${r.datetime || "-"}`, 15, y);
+    y += 6;
+
+    doc.setFont("helvetica", "normal");
+    const lines = doc.splitTextToSize(r.texte || "-", 175);
+    doc.text(lines, 15, y);
+    y += lines.length * 6 + 4;
+  });
+
+  doc.save("notes.pdf");
+});
 
 /******** Stats ********/
 const statsMonth=document.getElementById("statsMonth"); statsMonth.value=monthISO();
@@ -2199,28 +2278,26 @@ if(st === "bad") return "bad";
 
 
 window.addEventListener("load", () => {
-  console.log("listeners inspection chargés");
+
 
   const btnPdf = document.getElementById("btnInspectionPDF");
   const btnPrint = document.getElementById("btnInspectionPrint");
   const btnRefresh = document.getElementById("btnInspectionRefresh");
-
-  console.log("btnInspectionPDF =", btnPdf);
-  console.log("btnInspectionPrint =", btnPrint);
-  console.log("btnInspectionRefresh =", btnRefresh);
-
+  
   btnPdf?.addEventListener("click", () => {
-   renderInspectionMode();
-   exportInspectionModePDF();
+    renderInspectionMode();
+
+    exportInspectionModePDF();
   });
 
   btnPrint?.addEventListener("click", () => {
-   renderInspectionMode();
-   window.print();
+    renderInspectionMode();
+    window.print();
   });
 
   btnRefresh?.addEventListener("click", () => {
-   renderInspectionMode();
+
+    renderInspectionMode();
   });
 });
 

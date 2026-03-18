@@ -93,7 +93,7 @@
     <div class="card-title">Note du jour</div>
     <textarea id="todayNote" rows="4" placeholder="Écrire une remarque, un incident, une observation..."></textarea>
     <div class="row" style="margin-top:10px;">
-      <button id="btnSaveTodayNote" type="button">Enregistrer la note</button>
+      <button id="btnSaveTodayNote" class="btn btn-success" type="button">💾 Enregistrer la note</button>
     </div>
   </div>
 
@@ -102,8 +102,8 @@
     <div id="notifStatus" class="notif-status">Vérification...</div>
 
     <div class="row" style="margin-top:10px; gap:10px; flex-wrap:wrap;">
-      <button id="btnEnableNotif" type="button">Activer les notifications</button>
-      <button id="btnTestNotif" type="button">Tester la notification</button>
+      <button id="btnEnableNotif" class="btn btn-primary" type="button">Activer les notifications</button>
+      <button id="btnTestNotif" class="btn btn-primary" type="button">Tester la notification</button>
     </div>
   </div>
 
@@ -133,9 +133,10 @@
   <div id="zones"></div>
 
   <div class="actions">
-    <button id="btnSaveTemps">💾 Enregistrer</button>
-    <button id="btnExportTempsCSV">📄 Export CSV</button>
-    <button id="btnExportTempsPDF">🖨️ Export PDF</button>
+   <button id="btnSaveTemps" class="btn btn-success" type="button">💾 Enregistrer</button>
+   <button id="btnExportTempsCSV" class="btn btn-primary" type="button">📄 Export CSV</button>
+   <button id="btnExportTempsPDF" class="btn btn-primary" type="button">🖨️ Export PDF</button>
+  
   </div>
 
 </section>
@@ -165,9 +166,9 @@
   <div id="taches"></div>
 
   <div class="actions">
-    <button id="btnSaveHygiene">💾 Enregistrer</button>
-    <button id="btnExportHygieneCSV">📄 Export CSV</button>
-    <button id="btnExportHygienePDF">🖨️ Export PDF</button>
+   <button id="btnSaveHygiene" class="btn btn-success" type="button">💾 Enregistrer</button>
+   <button id="btnExportHygieneCSV" class="btn btn-primary" type="button">📄 Export CSV</button>
+   <button id="btnExportHygienePDF" class="btn btn-primary" type="button">🖨️ Export PDF</button>
   </div>
 </section>
 
@@ -182,9 +183,9 @@
   <textarea id="notesTexte" rows="10" placeholder="Ex : anomalie température, intervention technicien, nettoyage exceptionnel..."></textarea>
 
   <div class="actions">
-    <button id="btnSaveNotes">💾 Enregistrer</button>
-    <button id="btnExportNotesCSV">📄 Export CSV</button>
-    <button id="btnExportNotesPDF">🖨️ Export PDF</button>
+    <button id="btnSaveNotes" class="btn btn-success" type="button">💾 Enregistrer</button>
+    <button id="btnExportNotesCSV" class="btn btn-primary" type="button">📄 Export CSV</button>
+    <button id="btnExportNotesPDF" class="btn btn-primary" type="button">🖨️ Export PDF</button>
   </div>
 
   <h3>Historique</h3>
@@ -200,7 +201,7 @@
       <input id="statsMonth" type="month" />
     </div>
     <div>
-      <button id="btnRefreshStats" class="secondary">🔄 Actualiser</button>
+      <button id="btnRefreshStats" class="btn btn-warning" type="button">🔄 Actualiser</button>
     </div>
   </div>
 
@@ -254,8 +255,8 @@
       <input id="inspMonth" type="month" />
     </div>
     <div>
-      <button id="btnGenerateInspection" class="secondary">🧾 Générer PDF inspection</button>
-      <button id="btnGenerateMonthlyJournal" class="secondary" type="button">📘 Journal HACCP mensuel PDF</button>
+      <button id="btnGenerateInspection" class="btn btn-primary" type="button">🧾 Générer PDF inspection</button>
+      <button id="btnGenerateMonthlyJournal" class="btn btn-primary" type="button">📘 Journal HACCP mensuel PDF</button>
     </div>
   </div>
   <div class="card">
@@ -323,7 +324,7 @@
     </div>
 
     <div class="actions">
-      <button id="btnSaveReception">💾 Enregistrer</button>
+      <button id="btnSaveReception" class="btn btn-success" type="button">💾 Enregistrer</button>
     </div>
 
     <div class="reception-toolbar">
@@ -349,7 +350,7 @@
     </div>
 
     <div class="actions" style="align-items:end;">
-    <button id="btnAddSupplier" type="button">➕ Ajouter</button>
+    <button id="btnAddSupplier" class="btn btn-success" type="button">➕ Ajouter</button>
     </div>
     </div>
 
@@ -360,7 +361,7 @@
     </div>
 
     <div class="actions" style="align-items:end;">
-    <button id="btnDeleteSupplier" type="button">🗑 Supprimer</button>
+    <button id="btnDeleteSupplier" class="btn btn-danger" type="button">🗑 Supprimer</button>
     </div>
     </div>
 
@@ -378,7 +379,7 @@
     </div>
 
     <div class="actions" style="margin-top:10px;">
-    <button id="btnAddProductReception" type="button">➕ Ajouter produit</button>
+    <button id="btnAddProductReception" class="btn btn-success" type="button">➕ Ajouter produit</button>
     </div>
 
     <div class="row row-split">
@@ -388,7 +389,7 @@
     </div>
 
     <div class="actions" style="align-items:end;">
-    <button id="btnDeleteProductReception" type="button">🗑 Supprimer</button>
+    <button id="btnDeleteProductReception" class="btn btn-danger" type="button">🗑 Supprimer</button>
     </div>
     </div>
 
@@ -398,7 +399,7 @@
         <input type="text" id="newCategoryName" placeholder="Ex : Pâtisserie">
     </div>
     <div class="actions" style="align-items:end;">
-      <button id="btnAddCategory" type="button">➕ Ajouter</button>
+      <button id="btnAddCategory" class="btn btn-success" type="button">➕ Ajouter</button>
     </div>
     </div>
   
@@ -408,7 +409,7 @@
         <select id="categoryDelete"></select>
     </div>
     <div class="actions" style="align-items:end;">
-      <button id="btnDeleteCategory" type="button">🗑 Supprimer</button>
+      <button id="btnDeleteCategory" class="btn btn-danger" type="button">🗑 Supprimer</button>
     </div>
     </div>
   </div>
@@ -425,17 +426,17 @@
 <section id="inspection-mode" class="panel">
   <div class="inspection-header-card">
     <div>
-  <h2>Mode inspection</h2>
-  <div class="small">Affichage lecture seule, prêt à montrer en cas de contrôle.</div>
-  <div class="small" style="margin-top:6px;">
-    Données du jour mises à jour en temps réel.
-  </div>
-</div>
+      <h2>Mode inspection</h2>
+      <div class="small">Affichage lecture seule, prêt à montrer en cas de contrôle.</div>
+      <div class="small" style="margin-top:6px;">
+        Données du jour mises à jour en temps réel.
+      </div>
+    </div>
 
-   <div class="inspection-actions">
-    <button id="btnInspectionPrint" class="secondary" type="button">🖨️ Imprimer</button>
-    <button id="btnInspectionPDF" class="secondary" type="button">📄 Export PDF</button>
-    <button id="btnInspectionRefresh" class="secondary" type="button">🔄 Actualiser</button>
+    <div class="inspection-actions">
+      <button id="btnInspectionPrint" class="btn btn-dark" type="button">🖨️ Imprimer</button>
+      <button id="btnInspectionPDF" class="btn btn-primary" type="button">📄 Export PDF</button>
+      <button id="btnInspectionRefresh" class="btn btn-warning" type="button">🔄 Actualiser</button>
     </div>
   </div>
 
