@@ -1,4 +1,4 @@
-const CACHE_NAME = "boulangerie-v170";
+const CACHE_NAME = "boulangerie-v171";
 
 const ASSETS = [
   "./",
@@ -14,6 +14,7 @@ const ASSETS = [
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
+
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
@@ -21,53 +22,42 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
+    (async () => {
+      const keys = await caches.keys();
+
+      await Promise.all(
         keys
           .filter((key) => key !== CACHE_NAME)
           .map((key) => caches.delete(key))
-      )
-    ).then(async () => {
+      );
+
       await self.clients.claim();
 
-      const clientsList = await self.clients.matchAll({
-        type: "window",
-        includeUncontrolled: true
+      const clients = await self.clients.matchAll({ type: "window" });
+      clients.forEach((client) => {
+        client.postMessage({ type: "SW_UPDATED" });
       });
-
-      clientsList.forEach((client) => {
-        client.postMessage({
-          type: "SW_UPDATED"
-        });
-      });
-    })
+    })()
   );
 });
 
 self.addEventListener("fetch", (event) => {
-  const req = event.request;
-
-  if (req.method !== "GET") return;
-
-  const url = new URL(req.url);
-
-  // on ignore tout ce qui n'est pas http/https
-  if (url.protocol !== "http:" && url.protocol !== "https:") return;
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match("./index.html"))
+    );
+    return;
+  }
 
   event.respondWith(
-    fetch(req)
+    fetch(event.request)
       .then((response) => {
-        const copy = response.clone();
-
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(req, copy);
+        return caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, response.clone());
+          return response;
         });
-
-        return response;
       })
-      .catch(() =>
-        caches.match(req).then((cached) => cached || caches.match("./index.html"))
-      )
+      .catch(() => caches.match(event.request))
   );
 });
 

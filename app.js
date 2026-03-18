@@ -1032,26 +1032,76 @@ function exportMonthlyHACCPJournalPDF(monthStr){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
-  function drawContent(startX = 15){
-    let y = 18;
+  function getAlertColor(level){
+    if(level === "ok") return [22, 163, 74];
+    if(level === "warn") return [217, 119, 6];
+    return [220, 38, 38];
+  }
 
+  function drawContent(startX = 15){
+    let y = 16;
+
+    const hygPct = data.summary.hygieneTotal
+      ? Math.round((data.summary.hygieneDone / data.summary.hygieneTotal) * 100)
+      : 0;
+
+    let globalLevel = "ok";
+    let globalText = "Conforme";
+
+    if(data.summary.tempBad > 0){
+      globalLevel = "bad";
+      globalText = "Anomalies températures détectées";
+    }else if(data.summary.tempWarn > 0 || hygPct < 100){
+      globalLevel = "warn";
+      globalText = "Points à surveiller";
+    }
+
+    const statusColor = getAlertColor(globalLevel);
+
+    // ===== HEADER =====
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.text(data.establishment, startX, y);
+    doc.setFontSize(18);
+    doc.text(data.establishment || "Boulangerie Pâtisserie Cointe", startX, y);
 
     y += 8;
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(13);
-    doc.text(`Journal HACCP mensuel - ${formatMonthFR(data.month)}`, startX, y);
+    doc.setFontSize(12);
+    doc.text(`Journal HACCP mensuel • ${formatMonthFR(data.month)}`, startX, y);
 
     y += 10;
-    doc.setFontSize(11);
-    doc.text(`Généré le : ${nowLocale()}`, startX, y);
 
-    y += 10;
+    // Cartouche infos
+    doc.setDrawColor(200, 200, 200);
+    doc.setFillColor(250, 250, 250);
+    doc.roundedRect(15, y, 180, 24, 3, 3, "FD");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("Mois", 20, y + 7);
+    doc.text("Établissement", 75, y + 7);
+    doc.text("Généré le", 145, y + 7);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(formatMonthFR(data.month), 20, y + 14);
+    doc.text((data.establishment || "-").slice(0, 30), 75, y + 14);
+    doc.text(nowLocale(), 145, y + 14);
+
+    y += 34;
+
+    // ===== STATUT GLOBAL =====
+    doc.setFillColor(statusColor[0], statusColor[1], statusColor[2]);
+    doc.roundedRect(15, y, 180, 14, 4, 4, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text(`STATUT DU MOIS : ${globalText}`, 20, y + 9);
+    doc.setTextColor(0, 0, 0);
+
+    y += 22;
 
     function ensureSpace(lines = 1){
-      if(y + lines * 6 > 280){
+      if(y + lines * 6 > 270){
         doc.addPage();
         y = 20;
       }
@@ -1060,81 +1110,128 @@ function exportMonthlyHACCPJournalPDF(monthStr){
     function section(title){
       ensureSpace(4);
       y += 2;
-      doc.setDrawColor(190, 190, 190);
-      doc.line(15, y, 195, y);
-      y += 8;
+
+      doc.setFillColor(245, 247, 250);
+      doc.roundedRect(15, y, 180, 10, 2, 2, "F");
 
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(14);
-      doc.text(title, 15, y);
+      doc.setFontSize(12);
+      doc.text(title, 18, y + 7);
 
-      y += 8;
+      y += 16;
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
+      doc.setFontSize(10);
     }
 
-    function writeLabelValue(label, value){
+    function infoLine(label, value){
       ensureSpace(2);
 
       doc.setFont("helvetica", "bold");
-      const labelWidth = doc.getTextWidth(label) + 4;
-      doc.text(label, 17, y);
+      const labelText = `${label}`;
+      doc.text(labelText, 18, y);
+
+      const labelWidth = doc.getTextWidth(labelText) + 4;
 
       doc.setFont("helvetica", "normal");
-      const xValue = 17 + labelWidth;
-      const lines = doc.splitTextToSize(String(value || "-"), 180 - labelWidth);
-      doc.text(lines, xValue, y);
+      const lines = doc.splitTextToSize(String(value || "-"), 165 - labelWidth);
+      doc.text(lines, 18 + labelWidth, y);
 
-      y += Math.max(lines.length * 6, 7);
+      y += Math.max(lines.length * 5, 6);
     }
 
-    // 1) Infos générales
+    function normalText(text){
+      ensureSpace(2);
+      const lines = doc.splitTextToSize(String(text || "-"), 175);
+      doc.text(lines, 18, y);
+      y += lines.length * 5 + 2;
+    }
+
+    // ===== 1 INFOS =====
     section("1) Informations générales");
-    writeLabelValue("Établissement :", data.establishment);
-    writeLabelValue("Mois :", formatMonthFR(data.month));
-    writeLabelValue("Date de génération :", nowLocale());
+    infoLine("Établissement :", data.establishment);
+    infoLine("Mois :", formatMonthFR(data.month));
+    infoLine("Date de génération :", nowLocale());
 
-    // 2) Synthèse
+    // ===== 2 SYNTHESE =====
     section("2) Synthèse mensuelle");
-    writeLabelValue("Relevés températures :", data.summary.tempCount);
-    writeLabelValue("Températures OK :", data.summary.tempOk);
-    writeLabelValue("Températures limite :", data.summary.tempWarn);
-    writeLabelValue("Températures alerte :", data.summary.tempBad);
-    writeLabelValue("Relevés hygiène :", data.summary.hygieneCount);
-    writeLabelValue(
-      "Tâches hygiène faites :",
-      `${data.summary.hygieneDone}/${data.summary.hygieneTotal}`
-    );
-    writeLabelValue("Réceptions :", data.summary.receptionCount);
-    writeLabelValue("Notes :", data.summary.notesCount);
 
-    // 3) Températures
+    // Ligne 1
+    ensureSpace(8);
+    const boxY = y;
+
+    const summaryBoxes = [
+      { x: 17, w: 40, title: "Températures", value: String(data.summary.tempCount) },
+      { x: 61, w: 40, title: "Hygiène", value: String(data.summary.hygieneCount) },
+      { x: 105, w: 40, title: "Réceptions", value: String(data.summary.receptionCount) },
+      { x: 149, w: 40, title: "Notes", value: String(data.summary.notesCount) }
+    ];
+
+    summaryBoxes.forEach(b => {
+      doc.setDrawColor(230, 233, 238);
+      doc.roundedRect(b.x, boxY, b.w, 18, 2, 2);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.text(b.title, b.x + 3, boxY + 6);
+      doc.setFontSize(12);
+      doc.text(b.value, b.x + 3, boxY + 13);
+    });
+
+    y += 24;
+
+    infoLine("Températures OK :", data.summary.tempOk);
+    infoLine("Températures limite :", data.summary.tempWarn);
+    infoLine("Températures alerte :", data.summary.tempBad);
+    infoLine("Tâches hygiène réalisées :", `${data.summary.hygieneDone}/${data.summary.hygieneTotal} (${hygPct}%)`);
+
+    // ===== 3 TEMPERATURES =====
     section("3) Températures");
+
     if(!data.temps.length){
-      doc.text("Aucun relevé température sur la période.", 17, y);
-      y += 8;
+      normalText("Aucun relevé température sur la période.");
     }else{
       data.temps.forEach(r => {
         ensureSpace(4);
 
-        const line1 = `${formatDateFR(r.date)}  •  ${r.periode || "-"}  •  ${r.zone || "-"}`;
-        const line2 = `Valeur : ${getTemperatureDisplayValue(r)}  •  Employé : ${r.employee || "-"}`;
+        let level = "ok";
+        if(r.degivrage === "oui" || r.eteint === "oui"){
+          level = "warn";
+        }else{
+          const z = zones.find(x => x.nom === r.zone);
+          const st = tempStatus(z || {type:"positif",min:0,max:5}, Number(r.temperature));
+          level = st === "bad" ? "bad" : st === "warn" ? "warn" : "ok";
+        }
 
+        const color = getAlertColor(level);
+
+        doc.setDrawColor(230, 233, 238);
+        doc.roundedRect(17, y - 2, 176, 16, 2, 2);
+
+        doc.setFillColor(color[0], color[1], color[2]);
+        doc.roundedRect(20, y + 1, 34, 7, 2, 2, "F");
+
+        doc.setTextColor(255, 255, 255);
         doc.setFont("helvetica", "bold");
-        doc.text(doc.splitTextToSize(line1, 170), 17, y);
-        y += 6;
+        doc.setFontSize(8);
+        doc.text(getTemperatureDisplayValue(r), 23, y + 6);
+
+        doc.setTextColor(0, 0, 0);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.text(`${formatDateFR(r.date)} • ${r.zone || "-"}`, 58, y + 5);
 
         doc.setFont("helvetica", "normal");
-        doc.text(doc.splitTextToSize(line2, 170), 17, y);
-        y += 7;
+        doc.setFontSize(9);
+        doc.text(`${r.periode || "-"} • ${r.datetime || "-"} • ${r.employee || "-"}`, 58, y + 10);
+
+        y += 20;
       });
     }
 
-    // 4) Hygiène
+    // ===== 4 HYGIENE =====
     section("4) Hygiène");
+
     if(!data.hygiene.length){
-      doc.text("Aucun relevé hygiène sur la période.", 17, y);
-      y += 8;
+      normalText("Aucun relevé hygiène sur la période.");
     }else{
       data.hygiene.forEach(r => {
         ensureSpace(4);
@@ -1142,69 +1239,105 @@ function exportMonthlyHACCPJournalPDF(monthStr){
         const totalItems = (r.items || []).length;
         const doneItems = (r.items || []).filter(it => it.fait === "oui").length;
         const pct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
+        const level = pct === 100 ? "ok" : "warn";
+        const color = getAlertColor(level);
 
-        const line1 = `${formatDateFR(r.date)}  •  ${r.periode || "-"}  •  Employé : ${r.employee || "-"}`;
-        const line2 = `Tâches faites : ${doneItems}/${totalItems} (${pct}%)`;
+        doc.setDrawColor(230, 233, 238);
+        doc.roundedRect(17, y - 2, 176, 16, 2, 2);
 
+        doc.setFillColor(color[0], color[1], color[2]);
+        doc.roundedRect(20, y + 1, 28, 7, 2, 2, "F");
+
+        doc.setTextColor(255, 255, 255);
         doc.setFont("helvetica", "bold");
-        doc.text(doc.splitTextToSize(line1, 170), 17, y);
-        y += 6;
+        doc.setFontSize(8);
+        doc.text(`${pct}%`, 24, y + 6);
+
+        doc.setTextColor(0, 0, 0);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.text(`${formatDateFR(r.date)} • ${r.periode || "-"}`, 52, y + 5);
 
         doc.setFont("helvetica", "normal");
-        doc.text(doc.splitTextToSize(line2, 170), 17, y);
-        y += 7;
+        doc.setFontSize(9);
+        doc.text(`Employé : ${r.employee || "-"} • Tâches : ${doneItems}/${totalItems}`, 52, y + 10);
+
+        y += 20;
       });
     }
 
-    // 5) Réceptions
+    // ===== 5 RECEPTIONS =====
     section("5) Réceptions");
+
     if(!data.reception.length){
-      doc.text("Aucune réception sur la période.", 17, y);
-      y += 8;
+      normalText("Aucune réception sur la période.");
     }else{
       data.reception.forEach(r => {
         ensureSpace(5);
 
-        const line1 = `${formatDateFR(r.date)}  •  ${r.product || "-"}  •  ${r.supplier || "-"}`;
-        const line2 = `Catégorie : ${r.category || "-"}  •  Qté : ${r.quantity || "-"}  •  Lot : ${r.lot || "-"}`;
-        const line3 = `DLC : ${r.dlc ? formatDateFR(r.dlc) : "-"}  •  Température : ${r.temperature ? `${r.temperature}°C` : "-"}  •  Employé : ${r.employee || "-"}`;
+        doc.setDrawColor(230, 233, 238);
+        doc.roundedRect(17, y - 2, 176, 20, 2, 2);
 
         doc.setFont("helvetica", "bold");
-        doc.text(doc.splitTextToSize(line1, 170), 17, y);
-        y += 6;
+        doc.setFontSize(10);
+        doc.text(`${formatDateFR(r.date)} • ${r.product || "-"} • ${r.supplier || "-"}`, 20, y + 4);
 
         doc.setFont("helvetica", "normal");
-        doc.text(doc.splitTextToSize(line2, 170), 17, y);
-        y += 6;
-        doc.text(doc.splitTextToSize(line3, 170), 17, y);
-        y += 7;
+        doc.setFontSize(9);
+        doc.text(`Catégorie : ${r.category || "-"} • Qté : ${r.quantity || "-"} • Lot : ${r.lot || "-"}`, 20, y + 9);
+
+        const recTemp = r.temperature ? `${r.temperature}°C` : "-";
+        doc.text(`DLC : ${r.dlc ? formatDateFR(r.dlc) : "-"} • Température : ${recTemp} • Employé : ${r.employee || "-"}`, 20, y + 14);
+
+        y += 24;
       });
     }
 
-    // 6) Notes
+    // ===== 6 NOTES =====
     section("6) Notes / Observations");
+
     if(!data.notes.length){
-      doc.text("Aucune note sur la période.", 17, y);
-      y += 8;
+      normalText("Aucune note sur la période.");
     }else{
       data.notes.forEach(r => {
         ensureSpace(5);
 
         doc.setFont("helvetica", "bold");
-        doc.text(`${formatDateFR(r.date)} - ${r.datetime || "-"}`, 17, y);
+        doc.setFontSize(10);
+        doc.text(`${formatDateFR(r.date)} • ${r.datetime || "-"}`, 18, y);
         y += 6;
 
         doc.setFont("helvetica", "normal");
-        const lines = doc.splitTextToSize(r.texte || "-", 165);
-        doc.text(lines, 17, y);
-        y += lines.length * 6 + 3;
+        doc.setFontSize(10);
+        const lines = doc.splitTextToSize(r.texte || "-", 172);
+        doc.text(lines, 18, y);
+        y += lines.length * 5 + 4;
       });
     }
 
+    // ===== SIGNATURES =====
+    ensureSpace(8);
+    y += 10;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("Validation mensuelle", 15, y);
+
+    y += 12;
+    doc.line(20, y, 85, y);
+    doc.line(120, y, 185, y);
+
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text("Responsable", 20, y);
+    doc.text("Contrôle / Audit", 120, y);
+
+    // ===== FOOTER =====
     const pageCount = doc.getNumberOfPages();
     for(let i = 1; i <= pageCount; i++){
       doc.setPage(i);
-      doc.setFontSize(9);
+      doc.setFontSize(8);
       doc.setTextColor(120);
       doc.text(
         `Journal HACCP mensuel • ${formatMonthFR(data.month)} • Page ${i}/${pageCount}`,
@@ -1212,6 +1345,7 @@ function exportMonthlyHACCPJournalPDF(monthStr){
         290
       );
     }
+    doc.setTextColor(0, 0, 0);
   }
 
   if(typeof loadLogoBase64 === "function"){
@@ -1223,8 +1357,8 @@ function exportMonthlyHACCPJournalPDF(monthStr){
 
         if(logoData){
           try{
-            doc.addImage(logoData, "PNG", 15, 12, 18, 18);
-            drawContent(38);
+            doc.addImage(logoData, "PNG", 15, 12, 16, 16);
+            drawContent(36);
           }catch{
             drawContent(15);
           }
@@ -1233,25 +1367,25 @@ function exportMonthlyHACCPJournalPDF(monthStr){
         }
 
         const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
-        doc.save(`journal_HACCP_${safeName}_${data.month}.pdf`);
+        doc.save(`journal_HACCP_officiel_${safeName}_${data.month}.pdf`);
       });
 
       setTimeout(() => {
         if(!done){
           drawContent(15);
           const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
-          doc.save(`journal_HACCP_${safeName}_${data.month}.pdf`);
+          doc.save(`journal_HACCP_officiel_${safeName}_${data.month}.pdf`);
         }
       }, 800);
     }catch{
       drawContent(15);
       const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
-      doc.save(`journal_HACCP_${safeName}_${data.month}.pdf`);
+      doc.save(`journal_HACCP_officiel_${safeName}_${data.month}.pdf`);
     }
   }else{
     drawContent(15);
     const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
-    doc.save(`journal_HACCP_${safeName}_${data.month}.pdf`);
+    doc.save(`journal_HACCP_officiel_${safeName}_${data.month}.pdf`);
   }
 }
 
@@ -2044,35 +2178,60 @@ function exportInspectionModePDF(){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
+  function getStatusColor(status){
+    if(status === "ok") return [22, 163, 74];
+    if(status === "warn") return [217, 119, 6];
+    return [220, 38, 38];
+  }
+
   function drawContent(startX = 15, withLogo = false){
-    let y = 18;
+    let y = 16;
 
-    if(withLogo){
-      y = 20;
-    }
-
-    // Header
+    // ===== HEADER =====
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
+    doc.setFontSize(18);
     doc.text(data.establishment || "Boulangerie Pâtisserie Cointe", startX, y);
 
     y += 8;
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(13);
-    doc.text("Rapport inspection HACCP", startX, y);
+    doc.setFontSize(12);
+    doc.text("Rapport d'inspection HACCP - Lecture du jour", startX, y);
 
     y += 10;
-    doc.setFontSize(11);
-    doc.text(`Date : ${formatDateFR(data.date)}`, startX, y);
-    y += 6;
-    doc.text(`Employé : ${data.employee || "-"}`, startX, y);
-    y += 6;
-    doc.text(`Statut global : ${data.globalText || "-"}`, startX, y);
 
-    y += 10;
+    // Cartouche infos
+    doc.setDrawColor(200, 200, 200);
+    doc.setFillColor(250, 250, 250);
+    doc.roundedRect(15, y, 180, 24, 3, 3, "FD");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("Date", 20, y + 7);
+    doc.text("Employé", 80, y + 7);
+    doc.text("Généré le", 135, y + 7);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(formatDateFR(data.date), 20, y + 14);
+    doc.text(data.employee || "-", 80, y + 14);
+    doc.text(nowLocale(), 135, y + 14);
+
+    y += 34;
+
+    // ===== STATUT GLOBAL =====
+    const statusColor = getStatusColor(data.globalClass);
+    doc.setFillColor(statusColor[0], statusColor[1], statusColor[2]);
+    doc.roundedRect(15, y, 180, 14, 4, 4, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text(`STATUT GLOBAL : ${data.globalText}`, 20, y + 9);
+    doc.setTextColor(0, 0, 0);
+
+    y += 22;
 
     function ensureSpace(lines = 1){
-      if(y + lines * 6 > 280){
+      if(y + lines * 6 > 270){
         doc.addPage();
         y = 20;
       }
@@ -2081,144 +2240,199 @@ function exportInspectionModePDF(){
     function section(title){
       ensureSpace(4);
       y += 2;
-      doc.setDrawColor(190, 190, 190);
-      doc.line(15, y, 195, y);
-      y += 8;
+
+      doc.setFillColor(245, 247, 250);
+      doc.roundedRect(15, y, 180, 10, 2, 2, "F");
 
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(14);
-      doc.text(title, 15, y);
+      doc.setFontSize(12);
+      doc.text(title, 18, y + 7);
 
-      y += 8;
+      y += 16;
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
+      doc.setFontSize(10);
     }
 
-    function writeLabelValue(label, value){
-  ensureSpace(2);
+    function infoLine(label, value){
+      ensureSpace(2);
 
-  doc.setFont("helvetica", "bold");
+      doc.setFont("helvetica", "bold");
+      const labelText = `${label}`;
+      doc.text(labelText, 18, y);
 
-  // largeur du label
-  const labelWidth = doc.getTextWidth(label) + 4;
+      const labelWidth = doc.getTextWidth(labelText) + 4;
 
-  // affichage label
-  doc.text(label + " ", 17, y);
+      doc.setFont("helvetica", "normal");
+      const lines = doc.splitTextToSize(String(value || "-"), 165 - labelWidth);
+      doc.text(lines, 18 + labelWidth, y);
 
-  // valeur commence juste après le label
-  doc.setFont("helvetica", "normal");
+      y += Math.max(lines.length * 5, 6);
+    }
 
-  const xValue = 17 + labelWidth;
+    function normalText(text){
+      ensureSpace(2);
+      const lines = doc.splitTextToSize(String(text || "-"), 175);
+      doc.text(lines, 18, y);
+      y += lines.length * 5 + 2;
+    }
 
-  const lines = doc.splitTextToSize(String(value || "-"), 180 - labelWidth);
-
-  doc.text(lines, xValue, y);
-
-  y += Math.max(lines.length * 6, 7);
-}
-
-    // 1) Infos
+    // ===== 1 INFOS =====
     section("1) Informations générales");
-    writeLabelValue("Établissement :", data.establishment);
-    writeLabelValue("Date :", formatDateFR(data.date));
-    writeLabelValue("Employé sélectionné :", data.employee);
-    writeLabelValue("Statut global :", data.globalText);
+    infoLine("Établissement :", data.establishment);
+    infoLine("Date :", formatDateFR(data.date));
+    infoLine("Employé sélectionné :", data.employee);
+    infoLine("Statut global :", data.globalText);
 
-    // 2) Températures
+    // ===== 2 TEMPERATURES =====
     section("2) Températures du jour");
-    if(!data.tempsList || !data.tempsList.length){
-      doc.text("Aucun relevé température enregistré aujourd’hui.", 17, y);
-      y += 8;
+
+    if(!data.tempsList.length){
+      normalText("Aucun relevé température enregistré aujourd’hui.");
     }else{
+      infoLine("Nombre de relevés :", data.tempsList.length);
+
       data.tempsList.forEach(r => {
-        ensureSpace(3);
+        ensureSpace(4);
 
-        const line1 = `${r.zone || "-"}  •  ${r.periode || "-"}  •  ${getTemperatureDisplayValue(r)}`;
-        const line2 = `Heure : ${r.datetime || "-"}  •  Employé : ${r.employee || "-"}`;
+        const status = getInspectionTemperatureStatusClass(r);
+        const color = getStatusColor(status);
 
+        // bloc ligne
+        doc.setDrawColor(230, 233, 238);
+        doc.roundedRect(17, y - 2, 176, 16, 2, 2);
+
+        doc.setFillColor(color[0], color[1], color[2]);
+        doc.roundedRect(20, y + 1, 30, 7, 2, 2, "F");
+
+        doc.setTextColor(255, 255, 255);
         doc.setFont("helvetica", "bold");
-        doc.text(doc.splitTextToSize(line1, 170), 17, y);
-        y += 6;
+        doc.setFontSize(9);
+        doc.text(getTemperatureDisplayValue(r), 23, y + 6);
+
+        doc.setTextColor(0, 0, 0);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.text(r.zone || "-", 55, y + 5);
 
         doc.setFont("helvetica", "normal");
-        doc.text(doc.splitTextToSize(line2, 170), 17, y);
-        y += 7;
+        doc.setFontSize(9);
+        doc.text(`${r.periode || "-"} • ${r.datetime || "-"} • ${r.employee || "-"}`, 55, y + 10);
+
+        y += 20;
       });
     }
 
-    // 3) Hygiène
+    // ===== 3 HYGIENE =====
     section("3) Hygiène du jour");
+
     if(!data.lastHyg){
-      doc.text("Aucun relevé hygiène enregistré aujourd’hui.", 17, y);
-      y += 8;
+      normalText("Aucun relevé hygiène enregistré aujourd’hui.");
     }else{
       const totalItems = (data.lastHyg.items || []).length;
       const doneItems = (data.lastHyg.items || []).filter(it => it.fait === "oui").length;
+      const notDone = Math.max(totalItems - doneItems, 0);
       const pct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
 
-      writeLabelValue("Période :", data.lastHyg.periode || "-");
-      writeLabelValue("Heure :", data.lastHyg.datetime || "-");
-      writeLabelValue("Employé :", data.lastHyg.employee || "-");
-      writeLabelValue("Tâches faites :", `${doneItems}/${totalItems} (${pct}%)`);
+      infoLine("Période :", data.lastHyg.periode || "-");
+      infoLine("Heure :", data.lastHyg.datetime || "-");
+      infoLine("Employé :", data.lastHyg.employee || "-");
+      infoLine("Tâches réalisées :", `${doneItems}/${totalItems} (${pct}%)`);
+
+      if(notDone > 0){
+        doc.setTextColor(217, 119, 6);
+        normalText(`Attention : ${notDone} tâche(s) non réalisée(s).`);
+        doc.setTextColor(0, 0, 0);
+      }
     }
 
-    // 4) Réceptions
+    // ===== 4 RECEPTIONS =====
     section("4) Dernières réceptions");
-    if(!data.recRows || !data.recRows.length){
-      doc.text("Aucune réception enregistrée.", 17, y);
-      y += 8;
+
+    if(!data.recRows.length){
+      normalText("Aucune réception enregistrée.");
     }else{
       data.recRows.forEach(r => {
-        ensureSpace(4);
+        ensureSpace(5);
 
-        const line1 = `${r.product || "-"}  •  ${r.supplier || "-"}  •  ${r.category || "-"}`;
-        const line2 = `Date : ${r.date ? formatDateFR(r.date) : "-"}  •  Qté : ${r.quantity || "-"}  •  Lot : ${r.lot || "-"}  •  DLC : ${r.dlc ? formatDateFR(r.dlc) : "-"}`;
+        doc.setDrawColor(230, 233, 238);
+        doc.roundedRect(17, y - 2, 176, 18, 2, 2);
 
         doc.setFont("helvetica", "bold");
-        doc.text(doc.splitTextToSize(line1, 170), 17, y);
-        y += 6;
+        doc.setFontSize(10);
+        doc.text(`${r.product || "-"} • ${r.supplier || "-"}`, 20, y + 4);
 
         doc.setFont("helvetica", "normal");
-        doc.text(doc.splitTextToSize(line2, 170), 17, y);
-        y += 7;
+        doc.setFontSize(9);
+        doc.text(
+          `Date : ${r.date ? formatDateFR(r.date) : "-"} • Catégorie : ${r.category || "-"} • Qté : ${r.quantity || "-"}`,
+          20,
+          y + 9
+        );
+        doc.text(
+          `Lot : ${r.lot || "-"} • DLC : ${r.dlc ? formatDateFR(r.dlc) : "-"} • Employé : ${r.employee || "-"}`,
+          20,
+          y + 14
+        );
+
+        y += 22;
       });
     }
 
-    // 5) Notes
+    // ===== 5 NOTES =====
     section("5) Notes du jour");
-    if(!data.noteRows || !data.noteRows.length){
-      doc.text("Aucune note enregistrée aujourd’hui.", 17, y);
-      y += 8;
+
+    if(!data.noteRows.length){
+      normalText("Aucune note enregistrée aujourd’hui.");
     }else{
       data.noteRows.forEach(r => {
         ensureSpace(5);
 
         doc.setFont("helvetica", "bold");
-        doc.text(`${r.daily === true ? "Note du jour" : "Observation"} - ${r.datetime || "-"}`, 17, y);
+        doc.setFontSize(10);
+        doc.text(`${r.daily === true ? "Note du jour" : "Observation"} • ${r.datetime || "-"}`, 18, y);
         y += 6;
 
         doc.setFont("helvetica", "normal");
-        const lines = doc.splitTextToSize(r.texte || "-", 165);
-        doc.text(lines, 17, y);
-        y += lines.length * 6 + 3;
+        doc.setFontSize(10);
+        const lines = doc.splitTextToSize(r.texte || "-", 172);
+        doc.text(lines, 18, y);
+        y += lines.length * 5 + 4;
       });
     }
 
-    // Footer
+    // ===== SIGNATURES =====
+    ensureSpace(8);
+    y += 10;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("Validation", 15, y);
+
+    y += 12;
+    doc.line(20, y, 85, y);
+    doc.line(120, y, 185, y);
+
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text("Responsable", 20, y);
+    doc.text("Inspecteur", 120, y);
+
+    // ===== FOOTER =====
     const pageCount = doc.getNumberOfPages();
     for(let i = 1; i <= pageCount; i++){
       doc.setPage(i);
-      doc.setFontSize(9);
+      doc.setFontSize(8);
       doc.setTextColor(120);
       doc.text(
-        `Document généré automatiquement le ${nowLocale()}  •  Page ${i}/${pageCount}`,
+        `Rapport inspection HACCP • ${formatDateFR(data.date)} • Page ${i}/${pageCount}`,
         15,
         290
       );
     }
+    doc.setTextColor(0, 0, 0);
   }
 
-  // Logo plus petit et mieux placé
   if(typeof loadLogoBase64 === "function"){
     let done = false;
 
@@ -2228,8 +2442,8 @@ function exportInspectionModePDF(){
 
         if(logoData){
           try{
-            doc.addImage(logoData, "PNG", 15, 12, 18, 18);
-            drawContent(38, true);
+            doc.addImage(logoData, "PNG", 15, 12, 16, 16);
+            drawContent(36, true);
           }catch{
             drawContent(15, false);
           }
@@ -2238,25 +2452,25 @@ function exportInspectionModePDF(){
         }
 
         const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
-        doc.save(`inspection_${safeName}_${data.date}.pdf`);
+        doc.save(`inspection_officielle_${safeName}_${data.date}.pdf`);
       });
 
       setTimeout(() => {
         if(!done){
           drawContent(15, false);
           const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
-          doc.save(`inspection_${safeName}_${data.date}.pdf`);
+          doc.save(`inspection_officielle_${safeName}_${data.date}.pdf`);
         }
       }, 800);
     }catch{
       drawContent(15, false);
       const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
-      doc.save(`inspection_${safeName}_${data.date}.pdf`);
+      doc.save(`inspection_officielle_${safeName}_${data.date}.pdf`);
     }
   }else{
     drawContent(15, false);
     const safeName = (data.establishment || "boulangerie").replace(/\s+/g, "_");
-    doc.save(`inspection_${safeName}_${data.date}.pdf`);
+    doc.save(`inspection_officielle_${safeName}_${data.date}.pdf`);
   }
 }
 
@@ -2283,7 +2497,7 @@ window.addEventListener("load", () => {
   const btnPdf = document.getElementById("btnInspectionPDF");
   const btnPrint = document.getElementById("btnInspectionPrint");
   const btnRefresh = document.getElementById("btnInspectionRefresh");
-  
+
   btnPdf?.addEventListener("click", () => {
     renderInspectionMode();
 
