@@ -1465,6 +1465,7 @@ function testNotification(){
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnEnableNotif")?.addEventListener("click", requestNotificationPermission);
   document.getElementById("btnTestNotif")?.addEventListener("click", testNotification);
+  
 
   updateNotifStatusUI();
   renderCategories();
@@ -1656,18 +1657,7 @@ function exportInspectionModePDF(){
   });
 }
 
-  return {
-    establishment: bakeryName.value || "Boulangerie Pâtisserie Cointe",
-    date: todayISO(),
-    employee: employeeSelect?.value || "—",
-    globalClass,
-    globalText,
-    tempsList,
-    lastHyg,
-    recRows,
-    noteRows
-  };
-}
+
 
 function getInspectionTemperatureStatusClass(r){
   if(r.eteint === "oui") return "warn";
@@ -1862,18 +1852,36 @@ if(morning && afternoon && hygDone){
     globalEl.textContent = globalText;
   }
 }
-document.getElementById("btnInspectionRefresh")?.addEventListener("click", () => {
-  renderInspectionMode();
-});
 
-document.getElementById("btnInspectionPrint")?.addEventListener("click", () => {
-  renderInspectionMode();
-  window.print();
-});
+window.addEventListener("load", () => {
+  console.log("listeners inspection chargés");
 
-document.getElementById("btnInspectionPDF")?.addEventListener("click", () => {
-  renderInspectionMode();
-  exportInspectionModePDF();
+  const btnPdf = document.getElementById("btnInspectionPDF");
+  const btnPrint = document.getElementById("btnInspectionPrint");
+  const btnRefresh = document.getElementById("btnInspectionRefresh");
+
+  console.log("btnInspectionPDF =", btnPdf);
+  console.log("btnInspectionPrint =", btnPrint);
+  console.log("btnInspectionRefresh =", btnRefresh);
+
+  btnPdf?.addEventListener("click", () => {
+    alert("clic PDF OK");
+    renderInspectionMode();
+    exportInspectionModePDF();
+  });
+
+  btnPrint?.addEventListener("click", () => {
+    alert("clic PRINT OK");
+    renderInspectionMode();
+    window.print();
+  });
+
+  btnRefresh?.addEventListener("click", () => {
+    alert("clic REFRESH OK");
+    renderInspectionMode();
+  });
 });
 
 console.log("APP JS chargé");
+}
+
