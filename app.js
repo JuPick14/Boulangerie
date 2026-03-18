@@ -2478,8 +2478,7 @@ function exportInspectionModePDF(){
 
 function getInspectionTemperatureStatusClass(r){
   if(r.eteint === "oui") return "warn";
-if(r.degivrage === "oui") return "warn";
-if(st === "bad") return "bad";
+  if(r.degivrage === "oui") return "warn";
 
   const z = zones.find(x => x.nom === r.zone);
   const st = tempStatus(z || {type:"positif",min:0,max:5}, Number(r.temperature));
@@ -2493,14 +2492,12 @@ if(st === "bad") return "bad";
 
 window.addEventListener("load", () => {
 
-
   const btnPdf = document.getElementById("btnInspectionPDF");
   const btnPrint = document.getElementById("btnInspectionPrint");
   const btnRefresh = document.getElementById("btnInspectionRefresh");
 
   btnPdf?.addEventListener("click", () => {
     renderInspectionMode();
-
     exportInspectionModePDF();
   });
 
