@@ -53,6 +53,7 @@
   <button class="tab" data-tab="notes">📝 Notes</button>
   <button class="tab" data-tab="stats">📊 Stats</button>
   <button class="tab" data-tab="inspection">🧾 Inspection</button>
+  <button class="tab" data-tab="inspection-mode">🛂 Mode inspection</button>
 </nav>
 </header>
 
@@ -418,6 +419,66 @@
   </div>
 
 
+</section>
+
+<section id="inspection-mode" class="panel">
+  <div class="inspection-header-card">
+    <div>
+      <h2>Mode inspection</h2>
+      <div class="small">Affichage lecture seule, prêt à montrer en cas de contrôle.</div>
+    </div>
+
+    <div class="inspection-actions">
+      <button id="btnInspectionPrint" class="secondary" type="button">🖨️ Imprimer</button>
+      <button id="btnInspectionRefresh" class="secondary" type="button">🔄 Actualiser</button>
+    </div>
+  </div>
+
+  <div class="inspection-summary-grid">
+    <div class="inspection-summary-card">
+      <div class="inspection-summary-title">Établissement</div>
+      <div id="inspEstablishment" class="inspection-summary-value">—</div>
+    </div>
+
+    <div class="inspection-summary-card">
+      <div class="inspection-summary-title">Date</div>
+      <div id="inspDate" class="inspection-summary-value">—</div>
+    </div>
+
+    <div class="inspection-summary-card">
+      <div class="inspection-summary-title">Employé sélectionné</div>
+      <div id="inspEmployee" class="inspection-summary-value">—</div>
+    </div>
+
+    <div class="inspection-summary-card">
+      <div class="inspection-summary-title">Statut global</div>
+      <div id="inspGlobalStatus" class="inspection-status-pill">En attente</div>
+    </div>
+  </div>
+
+  <div class="inspection-grid">
+    <div class="inspection-card">
+      <div class="card-title">🌡️ Températures du jour</div>
+      <div id="inspectionTempsList"></div>
+    </div>
+
+    <div class="inspection-card">
+      <div class="card-title">🧹 Hygiène du jour</div>
+      <div id="inspectionHygieneBox"></div>
+    </div>
+  </div>
+
+  <div class="inspection-grid">
+    <div class="inspection-card">
+      <div class="card-title">🚚 Dernières réceptions</div>
+      <div id="inspectionReceptionList"></div>
+    </div>
+
+    <div class="inspection-card">
+      <div class="card-title">📝 Notes du jour</div>
+      <div id="inspectionNotesBox"></div>
+    </div>
+  </div>
 </section>
 
 
