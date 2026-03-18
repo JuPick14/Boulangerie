@@ -1527,6 +1527,140 @@ function getInspectionModeData(){
     }
   }
 
+function renderInspectionMode(){
+  const est = document.getElementById("inspEstablishment");
+  const dateEl = document.getElementById("inspDate");
+  const empEl = document.getElementById("inspEmployee");
+  const globalEl = document.getElementById("inspGlobalStatus");
+
+  const tempsBox = document.getElementById("inspectionTempsList");
+  const hygBox = document.getElementById("inspectionHygieneBox");
+  const recBox = document.getElementById("inspectionReceptionList");
+  const notesBox = document.getElementById("inspectionNotesBox");
+
+  if(!tempsBox || !hygBox || !recBox || !notesBox) return;
+
+  const data = getInspectionModeData();
+
+  if(est) est.textContent = data.establishment;
+  if(dateEl) dateEl.textContent = formatDateFR(data.date);
+  if(empEl) empEl.textContent = data.employee;
+
+  if(globalEl){
+    globalEl.className = `inspection-status-pill ${data.globalClass}`;
+    globalEl.textContent = data.globalText;
+  }
+
+  if(!data.tempsList.length){
+    tempsBox.innerHTML = `<div class="inspection-empty">Aucun relevé température enregistré aujourd’hui.</div>`;
+  }else{
+    const tempsSummary = `
+      <div class="inspection-hygiene-stats">
+        <div class="inspection-mini-stat">
+          <div class="inspection-mini-stat-title">Relevés</div>
+          <div class="inspection-mini-stat-value">${data.tempsList.length}</div>
+        </div>
+      </div>
+    `;
+
+    tempsBox.innerHTML = `
+      ${tempsSummary}
+      <div class="inspection-list">
+        ${data.tempsList.map(r => `
+          <div class="inspection-item">
+            <div class="inspection-item-top">
+              <div>
+                <div class="inspection-item-title">${r.zone || "-"}</div>
+                <div class="inspection-item-sub">${r.periode || "-"} · ${r.datetime || "-"}</div>
+              </div>
+              <div class="inspection-item-value ${getInspectionTemperatureStatusClass(r)}">
+                ${getTemperatureDisplayValue(r)}
+              </div>
+            </div>
+            <div class="inspection-item-sub">Employé : ${r.employee || "-"}</div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  if(!data.lastHyg){
+    hygBox.innerHTML = `<div class="inspection-empty">Aucun relevé hygiène enregistré aujourd’hui.</div>`;
+  }else{
+    const totalItems = (data.lastHyg.items || []).length;
+    const doneItems = (data.lastHyg.items || []).filter(it => it.fait === "oui").length;
+    const notDone = Math.max(totalItems - doneItems, 0);
+    const pct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
+
+    hygBox.innerHTML = `
+      <div class="inspection-hygiene-stats">
+        <div class="inspection-mini-stat">
+          <div class="inspection-mini-stat-title">Tâches faites</div>
+          <div class="inspection-mini-stat-value">${doneItems}</div>
+        </div>
+        <div class="inspection-mini-stat">
+          <div class="inspection-mini-stat-title">Taux de réalisation</div>
+          <div class="inspection-mini-stat-value">${pct}%</div>
+        </div>
+      </div>
+
+      <div class="inspection-item">
+        <div class="inspection-item-top">
+          <div>
+            <div class="inspection-item-title">Dernier relevé hygiène</div>
+            <div class="inspection-item-sub">${data.lastHyg.periode || "-"} · ${data.lastHyg.datetime || "-"}</div>
+          </div>
+          <div class="inspection-item-value ${notDone === 0 ? "ok" : "warn"}">
+            ${doneItems}/${totalItems}
+          </div>
+        </div>
+        <div class="inspection-item-sub">Employé : ${data.lastHyg.employee || "-"}</div>
+      </div>
+    `;
+  }
+
+  if(!data.recRows.length){
+    recBox.innerHTML = `<div class="inspection-empty">Aucune réception enregistrée.</div>`;
+  }else{
+    recBox.innerHTML = `
+      <div class="inspection-list">
+        ${data.recRows.map(r => `
+          <div class="inspection-item">
+            <div class="inspection-item-top">
+              <div>
+                <div class="inspection-item-title">${r.product || "-"}</div>
+                <div class="inspection-item-sub">${r.supplier || "-"} · ${r.category || "-"}</div>
+              </div>
+              <div class="inspection-item-value">${r.date ? formatDateFR(r.date) : "-"}</div>
+            </div>
+            <div class="inspection-item-sub">
+              Quantité : ${r.quantity || "-"} · Lot : ${r.lot || "-"} · DLC : ${r.dlc ? formatDateFR(r.dlc) : "-"}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  if(!data.noteRows.length){
+    notesBox.innerHTML = `<div class="inspection-empty">Aucune note enregistrée aujourd’hui.</div>`;
+  }else{
+    notesBox.innerHTML = `
+      <div class="inspection-list">
+        ${data.noteRows.map(r => `
+          <div class="inspection-item">
+            <div class="inspection-item-top">
+              <div class="inspection-item-title">${r.daily === true ? "Note du jour" : "Observation"}</div>
+              <div class="inspection-item-sub">${r.datetime || "-"}</div>
+            </div>
+            <div class="inspection-item-sub">${(r.texte || "").trim() || "-"}</div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+}
+
 function exportInspectionModePDF(){
   const data = getInspectionModeData();
 
@@ -1672,186 +1806,7 @@ if(st === "bad") return "bad";
   return "bad";
 }
 
-function renderInspectionMode(){
-  const est = document.getElementById("inspEstablishment");
-  const dateEl = document.getElementById("inspDate");
-  const empEl = document.getElementById("inspEmployee");
-  const globalEl = document.getElementById("inspGlobalStatus");
 
-  const tempsBox = document.getElementById("inspectionTempsList");
-  const hygBox = document.getElementById("inspectionHygieneBox");
-  const recBox = document.getElementById("inspectionReceptionList");
-  const notesBox = document.getElementById("inspectionNotesBox");
-
-  if(!tempsBox || !hygBox || !recBox || !notesBox) return;
-
-  if(est) est.textContent = bakeryName.value || "Boulangerie Pâtisserie Cointe";
-  if(dateEl) dateEl.textContent = formatDateFR(todayISO());
-  if(empEl) empEl.textContent = employeeSelect?.value || "—";
-
-  /* Températures du jour */
-  const tempsRows = getTodayTemperatureRows();
-  const latestByZone = {};
-
-  tempsRows.forEach(r => {
-    const key = `${r.periode}__${r.zone}`;
-    latestByZone[key] = r;
-  });
-
-  const tempsList = Object.values(latestByZone);
-
-  if(!tempsList.length){
-    tempsBox.innerHTML = `<div class="inspection-empty">Aucun relevé température enregistré aujourd’hui.</div>`;
-  }else{
-
-  const tempsSummary = `
-    <div class="inspection-hygiene-stats">
-      <div class="inspection-mini-stat">
-        <div class="inspection-mini-stat-title">Relevés</div>
-        <div class="inspection-mini-stat-value">${tempsList.length}</div>
-      </div>
-    </div>
-  `;
-
-  tempsBox.innerHTML = `
-    ${tempsSummary}
-
-    <div class="inspection-list">
-      ${tempsList.map(r => `
-        <div class="inspection-item">
-          <div class="inspection-item-top">
-            <div>
-              <div class="inspection-item-title">${r.zone || "-"}</div>
-              <div class="inspection-item-sub">${r.periode || "-"} · ${r.datetime || "-"}</div>
-            </div>
-            <div class="inspection-item-value ${getInspectionTemperatureStatusClass(r)}">
-              ${getTemperatureDisplayValue(r)}
-            </div>
-          </div>
-          <div class="inspection-item-sub">Employé : ${r.employee || "-"}</div>
-        </div>
-      `).join("")}
-    </div>
-  `;
-}
-
-  /* Hygiène du jour */
-  const hygRows = readLS(LS.hygiene).filter(r => r.date === todayISO());
-  const lastHyg = hygRows.length ? hygRows[hygRows.length - 1] : null;
-
-  if(!lastHyg){
-    hygBox.innerHTML = `<div class="inspection-empty">Aucun relevé hygiène enregistré aujourd’hui.</div>`;
-  }else{
-    const totalItems = (lastHyg.items || []).length;
-    const doneItems = (lastHyg.items || []).filter(it => it.fait === "oui").length;
-    const notDone = Math.max(totalItems - doneItems, 0);
-    const pct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
-
-    hygBox.innerHTML = `
-      <div class="inspection-hygiene-stats">
-        <div class="inspection-mini-stat">
-          <div class="inspection-mini-stat-title">Tâches faites</div>
-          <div class="inspection-mini-stat-value">${doneItems}</div>
-        </div>
-        <div class="inspection-mini-stat">
-          <div class="inspection-mini-stat-title">Taux de réalisation</div>
-          <div class="inspection-mini-stat-value">${pct}%</div>
-        </div>
-      </div>
-
-      <div class="inspection-item">
-        <div class="inspection-item-top">
-          <div>
-            <div class="inspection-item-title">Dernier relevé hygiène</div>
-            <div class="inspection-item-sub">${lastHyg.periode || "-"} · ${lastHyg.datetime || "-"}</div>
-          </div>
-          <div class="inspection-item-value ${notDone === 0 ? "ok" : "warn"}">
-            ${doneItems}/${totalItems}
-          </div>
-        </div>
-        <div class="inspection-item-sub">Employé : ${lastHyg.employee || "-"}</div>
-      </div>
-    `;
-  }
-
-  /* Réceptions récentes */
-  const recRows = readLS(LS.reception)
-    .slice()
-    .reverse()
-    .slice(0, 5);
-
-  if(!recRows.length){
-    recBox.innerHTML = `<div class="inspection-empty">Aucune réception enregistrée.</div>`;
-  }else{
-    recBox.innerHTML = `<div class="inspection-list">
-      ${recRows.map(r => `
-        <div class="inspection-item">
-          <div class="inspection-item-top">
-            <div>
-              <div class="inspection-item-title">${r.product || "-"}</div>
-              <div class="inspection-item-sub">${r.supplier || "-"} · ${r.category || "-"}</div>
-            </div>
-            <div class="inspection-item-value">${r.date ? formatDateFR(r.date) : "-"}</div>
-          </div>
-          <div class="inspection-item-sub">
-            Quantité : ${r.quantity || "-"} · Lot : ${r.lot || "-"} · DLC : ${r.dlc ? formatDateFR(r.dlc) : "-"}
-          </div>
-        </div>
-      `).join("")}
-    </div>`;
-  }
-
-  /* Notes du jour */
-  const noteRows = readLS(LS.notes).filter(r => r.date === todayISO());
-
-  if(!noteRows.length){
-    notesBox.innerHTML = `<div class="inspection-empty">Aucune note enregistrée aujourd’hui.</div>`;
-  }else{
-    notesBox.innerHTML = `<div class="inspection-list">
-      ${noteRows.slice().reverse().map(r => `
-        <div class="inspection-item">
-          <div class="inspection-item-top">
-            <div class="inspection-item-title">${r.daily === true ? "Note du jour" : "Observation"}</div>
-            <div class="inspection-item-sub">${r.datetime || "-"}</div>
-          </div>
-          <div class="inspection-item-sub">${(r.texte || "").trim() || "-"}</div>
-        </div>
-      `).join("")}
-    </div>`;
-  }
-
-  /* Statut global */
-  const morning = tempsDoneFor("matin");
-  const afternoon = tempsDoneFor("apres-midi");
-  const hygDone = !!getLastHygieneToday();
-
-  let globalClass = "warn";
-let globalText = "À vérifier";
-
-if(morning && afternoon && hygDone){
-  globalClass = "ok";
-  globalText = "Conforme ✔";
-}else{
-  const missing = [];
-
-  if(!morning) missing.push("Temp matin");
-  if(!afternoon) missing.push("Temp après-midi");
-  if(!hygDone) missing.push("Hygiène");
-
-  if(missing.length === 3){
-    globalClass = "bad";
-    globalText = "Aucun relevé";
-  }else{
-    globalClass = "warn";
-    globalText = "Manquant : " + missing.join(", ");
-  }
-}
-
-  if(globalEl){
-    globalEl.className = `inspection-status-pill ${globalClass}`;
-    globalEl.textContent = globalText;
-  }
-}
 
 window.addEventListener("load", () => {
   console.log("listeners inspection chargés");
