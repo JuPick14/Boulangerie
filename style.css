@@ -851,6 +851,20 @@ textarea{
   border-radius:12px;
 }
 
+#temperatures .row input[type="checkbox"]{
+  width:20px;
+  height:20px;
+  accent-color:var(--ok);
+  cursor:pointer;
+}
+
+#temperatures .row label{
+  margin:0 10px 0 0;
+  font-weight:600;
+  color:var(--subtext);
+  cursor:pointer;
+}
+
 /* ===== HYGIÈNE ===== */
 #hygiene .card{
   background:linear-gradient(180deg,#ffffff 0%, #fcfcfd 100%);

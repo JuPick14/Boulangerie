@@ -240,7 +240,8 @@ function renderZones(){
     const row = document.createElement("div");
     row.className = "row";
     row.style.marginTop = "10px";
-    row.style.gap = "8px";
+    row.style.gap = "12px";
+    row.style.flexWrap = "wrap";
 
     const cb = document.createElement("input");
     cb.type = "checkbox";
@@ -250,12 +251,20 @@ function renderZones(){
     lbl.htmlFor = cb.id;
     lbl.textContent = "En dégivrage";
 
+    const cbOff = document.createElement("input");
+    cbOff.type = "checkbox";
+    cbOff.id = `off-${i}`;
+
+    const lblOff = document.createElement("label");
+    lblOff.htmlFor = cbOff.id;
+    lblOff.textContent = "Équipement éteint";
+
     function refreshCardState(){
       const val = parseFloat(input.value);
 
       card.classList.remove("ok","warn","bad","muted");
 
-      if(cb.checked){
+      if(cb.checked || cbOff.checked){
         input.disabled = true;
         input.value = "";
         card.classList.add("muted");
@@ -270,11 +279,22 @@ function renderZones(){
       if(st === "bad") card.classList.add("bad");
     }
 
+    cb.addEventListener("change", () => {
+      if(cb.checked) cbOff.checked = false;
+      refreshCardState();
+    });
+
+    cbOff.addEventListener("change", () => {
+      if(cbOff.checked) cb.checked = false;
+      refreshCardState();
+    });
+
     input.addEventListener("input", refreshCardState);
-    cb.addEventListener("change", refreshCardState);
 
     row.appendChild(cb);
     row.appendChild(lbl);
+    row.appendChild(cbOff);
+    row.appendChild(lblOff);
 
     card.appendChild(title);
     card.appendChild(small);
@@ -290,21 +310,24 @@ document.getElementById("btnSaveTemps").addEventListener("click",()=>{
   const emp=requireEmployee(); if(!emp) return;
   const periode=document.getElementById("periode").value;
   const rows=readLS(LS.temps);
-  zones.forEach((z,i)=>{
-  const input=document.getElementById(`temp-${i}`);
-  const cb=document.getElementById(`degivrage-${i}`);
+  zones.forEach((z,i) => {
+  const input = document.getElementById(`temp-${i}`);
+  const cb = document.getElementById(`degivrage-${i}`);
+  const off = document.getElementById(`off-${i}`);
 
-  const v=input ? input.value : "";
-  const degivrage=cb && cb.checked ? "oui" : "non";
+  const v = input ? input.value : "";
+  const degivrage = cb && cb.checked ? "oui" : "non";
+  const eteint = off && off.checked ? "oui" : "non";
 
-  if(degivrage==="oui" || v!==""){
+  if(degivrage === "oui" || eteint === "oui" || v !== ""){
     rows.push({
       date:todayISO(),
       datetime:nowLocale(),
       periode,
       zone:z.nom,
-      temperature:degivrage==="oui" ? "" : Number(v),
+      temperature:(degivrage === "oui" || eteint === "oui") ? "" : Number(v),
       degivrage,
+      eteint,
       employee:emp
     });
   }
@@ -314,10 +337,8 @@ refreshToday();
 
 alert("Relevé températures enregistré ✔");
 
-// recharger la page pour repartir sur un formulaire vide
-setTimeout(()=>{
-  window.location.reload();
-},300);
+renderZones();
+openTab("today");
 });
 
 document.getElementById("btnExportTempsCSV").addEventListener("click",()=>{
@@ -1436,5 +1457,9 @@ document.addEventListener("DOMContentLoaded", () => {
   renderReceptionList();
   
   openTab("today");
+});
+
+window.addEventListener("pageshow", () => {
+  refreshToday();
 });
 console.log("APP JS chargé");
